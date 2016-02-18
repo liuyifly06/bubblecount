@@ -179,7 +179,7 @@ def generateInstancesSVM(instanceSize, step, edge, scale, plot_show = 0):
 	print 'Generating training instances ... instanceSize: ' \
 		+ str(instanceSize) + ' step: ' + str(step)
 
-	train_file = "detector_5_no_5_angle_2.jpg"
+	train_file = "../../images/detector_5_no_5_angle_2.jpg"
 	train = io.imread(train_file)
 	positiveLabels = poistiveLabelRegion()
 	[m,n,c] = train.shape
@@ -293,7 +293,7 @@ def generateInstancesNN(instanceSize, step, plot_show = 1):
 	print 'Generating training instances ... instanceSize: ' \
 		+ str(instanceSize) + ' step: ' + str(step)
 
-	train_file = 'detector_5_no_5_angle_2.jpg'
+	train_file = "../../images/detector_5_no_5_angle_2.jpg"
 	train = io.imread(train_file)
 	positiveLabels = poistiveLabelRegion()
 	[m,n,c] = train.shape
