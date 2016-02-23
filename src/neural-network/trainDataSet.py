@@ -68,7 +68,7 @@ def read_data_sets(dtype=tf.float32):
     pass
   data_sets = DataSets()
 
-  VALIDATION_SIZE = 5000
+  VALIDATION_SIZE = 100000
   instanceSize = 10;
   step = 2;
 
