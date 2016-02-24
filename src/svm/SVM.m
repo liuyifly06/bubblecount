@@ -1,14 +1,14 @@
 % Analysis image with SVM Method
 
-instanceSize = 10;
-step = 2;
+instanceSize = 20;
+step = 10;
 edge = 4;
 scale = 60;
 
 dimensionReduction = false;
 ReducedDimentions = 20;
 
-testfilename = 'detector_7_no_5_angle_2.jpg'; 
+testfilename = '../../images/detector_7_no_5_angle_2.jpg'; 
 [trainInstances, trainLabels] = trainDataSetGeneration(instanceSize, step, edge, scale);
 testInstances = testDataSetGeneration(testfilename, instanceSize, step);
 

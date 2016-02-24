@@ -6,7 +6,7 @@ instances_show = 0;
 disp(['Generating training instances ... instanceSize: ' ...
     num2str(instanceSize) ' step: ' num2str(step)]);
 
-train_file = 'detector_5_no_5_angle_2.jpg';
+train_file = '../../images/detector_5_no_5_angle_2.jpg';
 train = imread(train_file);
 load('positiveInstances.mat');
 [m,n,c] = size(train);

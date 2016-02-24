@@ -1,6 +1,4 @@
 """Functions for downloading and reading MNIST data."""
-import gzip
-import os
 import tensorflow as tf
 import sys, traceback, time
 import numpy as np
@@ -63,24 +61,12 @@ class DataSet(object):
     end = self._index_in_epoch
     return self._images[start:end], self._labels[start:end]
 
-def read_data_sets(dtype=tf.float32):
+def read_data_sets(instanceSize, step, dtype=tf.float32, plot_show = 0):
   class DataSets(object):
     pass
   data_sets = DataSets()
-
-  VALIDATION_SIZE = 100000
-  instanceSize = 10;
-  step = 2;
-
-  [train_images, train_labels] = generateInstancesNN(instanceSize, step, 0)
-  validation_images = train_images[:VALIDATION_SIZE]
-  validation_labels = train_labels[:VALIDATION_SIZE]
-  train_images = train_images[VALIDATION_SIZE:]
-  train_labels = train_labels[VALIDATION_SIZE:]
-
+  [train_images, train_labels] = generateInstancesNN(instanceSize, step, plot_show)
   data_sets.train = DataSet(train_images, train_labels, dtype=dtype)
-  data_sets.validation = DataSet(validation_images, validation_labels,
-                                 dtype=dtype)
   return data_sets
 
 def generateInstancesNN(instanceSize, step, plot_show = 1):
@@ -318,3 +304,20 @@ def poistiveLabelRegion():
 	[1815, 698, 26, 27], \
 	[1910, 562, 32, 37], \
 	[1650, 457, 51, 60]])
+def main():
+     try:
+         instanceSize = 10;
+         step = 2;
+         edge = 4;
+         scale =10;
+	 read_data_sets(instanceSize, step, plot_show = 1)
+ 
+     except KeyboardInterrupt:
+         print "Shutdown requested... exiting"
+     except Exception:
+         traceback.print_exc(file=sys.stdout)
+     sys.exit(0)
+ 
+if __name__ == '__main__':
+     main()
+
