@@ -1,8 +1,6 @@
 import sys, traceback, time
 import numpy as np
-
 from matplotlib import pyplot as plt
-
 from skimage import io
 
 def poistiveLabelRegion():
@@ -328,7 +326,9 @@ def generateInstancesNN(instanceSize, step, plot_show = 1):
 
         		Instances[:, ind] = np.reshape(temp,(instanceSize ** 2 * c, 1)).T
 			
-			probabiliyIndex = max(0,np.floor(np.sqrt(gaussian2d(currentY, currentX, positiveLabels, scale = 0.3))*100)-1);
+			probabiliyIndex = max(0,np.floor(np.sqrt( \
+				gaussian2d(currentY, currentX, positiveLabels,\
+				scale = 0.3))*100)-1);
 			probabiliyIndex = min(99, probabiliyIndex);
 			Labels[probabiliyIndex, ind] = 1;
     

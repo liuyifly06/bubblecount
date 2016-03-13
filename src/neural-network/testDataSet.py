@@ -118,7 +118,7 @@ def generateInstances(img, instanceSize, step):
 
 def main():
     try:
-	test_file = '../../images/detector_7_no_5_angle_2.jpg'
+	test_file = '../../images/detector_2_no_5_angle_2.jpg'
 	img = io.imread(test_file)
 	instanceSize = 10;
 	step = 2;
