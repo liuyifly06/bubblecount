@@ -8,8 +8,7 @@ Compiled source #
 *.so
 *.py
 *.pyc
-*.py~
-*.cpp~
+*.*~
 .*.swp
 
 # Packages #
