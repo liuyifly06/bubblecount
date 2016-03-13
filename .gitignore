@@ -10,7 +10,7 @@ Compiled source #
 *.pyc
 *.py~
 *.cpp~
-.*.swp.*
+.*.swp
 
 # Packages #
 ############
