@@ -25,8 +25,8 @@ def displayTime(str_process ,elap_time, rema_time):
 
 def main():
     try:    
-      ins_size = 10
-      step = 2
+      ins_size = 20
+      step = 4
       label_option = 100
 
       sess = tf.Session()
@@ -44,9 +44,9 @@ def main():
 
       # Create the model
       x = tf.placeholder(tf.float32, shape=[None, ins_size**2*3], name = "x_input")
-      y_ = tf.placeholder(tf.float32, [None, label_option], name="y_input") 
-      batch_index = tf.placeholder(tf.int32, shape = [], name = "batch_index")
-      W = tf.Variable(tf.zeros([ins_size**2*3,label_option]), name = "weights")
+      y_ = tf.placeholder(tf.float32, [None, label_option], name="y_input")
+      batch_index = tf.placeholder(tf.int32, shape = [], name = "batch_index") 
+      W = tf.Variable(tf.zeros([(ins_size**2*3),label_option]), name = "weights")
       b = tf.Variable(tf.zeros([label_option]), name = "bias")
       p_train = tf.Variable(tf.ones([batch_num,batch_size]), name = "probability")
       p_test  = tf.Variable(tf.ones([batch_num,batch_size]), name = "probability")
