@@ -1,5 +1,4 @@
 % Analysis image with SVM Method
-
 instanceSize = 20;
 step = 10;
 edge = 4;
