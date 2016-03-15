@@ -1,8 +1,6 @@
 # combine adaptive and globle thereshold method according to light change
 import sys, traceback, time
 import numpy as np
-import preprocessing as pre
-import ellipse
 from skimage.color import rgb2gray
 from skimage import io
 from matplotlib import pyplot as plt
@@ -21,9 +19,9 @@ def main():
         data = np.loadtxt(data_filename,skiprows=0)
         cur = np.reshape(data,(41,3))
 
-        data_filename = 'curvature.txt'
+        data_filename = 'skflow.txt'
         data = np.loadtxt(data_filename,skiprows=0)
-        hough = np.reshape(data,(41,3))
+        hough = np.reshape(data,(41,4))
     
         #emperical error    
         xerr = np.sqrt(hough[:,0])/3
