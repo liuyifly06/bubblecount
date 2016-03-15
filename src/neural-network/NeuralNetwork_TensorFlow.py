@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from skimage import io
 from skimage import img_as_float
 from skimage.filters import gaussian_filter
-
+from skimage import img_as_ubyte
 def displayTime(str_process ,elap_time, rema_time):
     if(rema_time < 0):
         print    'Current process : ' + str_process + \
@@ -32,7 +32,7 @@ def main():
       sess = tf.Session()
     
       #training data
-      trainDS = trainds.read_data_sets(ins_size, step);
+      trainDS = trainds.read_data_sets(ins_size, step,label_option);
 
       #testing  data
       testfile = '../../images/detector_2_no_5_angle_2.jpg'

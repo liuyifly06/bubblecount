@@ -60,15 +60,15 @@ class DataSet(object):
     end = self._index_in_epoch
     return self._images[start:end], self._labels[start:end]
 
-def read_data_sets(instanceSize, step, dtype=tf.float32, plot_show = 0):
+def read_data_sets(instanceSize, step, label_option, dtype=tf.float32, plot_show = 0):
     class DataSets(object):
       pass
     data_sets = DataSets()
-    [train_images, train_labels] = generateInstancesNN(instanceSize, step, plot_show)
+    [train_images, train_labels] = generateInstancesNN(instanceSize, step, label_option, plot_show)
     data_sets.train = DataSet(train_images, train_labels, dtype=dtype)
     return data_sets
 
-def generateInstancesNN(instanceSize, step, plot_show = 1):
+def generateInstancesNN(instanceSize, step, label_option, plot_show = 1):
     print 'Generating training instances ... instanceSize: ' \
         + str(instanceSize) + ' step: ' + str(step)
 
@@ -86,7 +86,7 @@ def generateInstancesNN(instanceSize, step, plot_show = 1):
     progressRatePrevious = 0
 
     Instances = np.zeros( (instanceSize ** 2 * c, totalInstancesX * totalInstancesY ))
-    Labels = np.zeros((100, totalInstancesX * totalInstancesY))
+    Labels = np.zeros((label_option, totalInstancesX * totalInstancesY))
 
     ind = -1
     
@@ -106,11 +106,15 @@ def generateInstancesNN(instanceSize, step, plot_show = 1):
                 temp = train[boundaryT : boundaryD, boundaryL : boundaryR, :]
 
                 Instances[:, ind] = np.reshape(temp,(instanceSize ** 2 * c, 1)).T
-            
+                
+ 		if(label_option == 2):
+                   factor = 3;
+                else: 
+                   factor = 2;
             	probabiliyIndex = max(0,np.floor(np.sqrt(\
                 	gaussian2d(currentY, currentX, positiveLabels, \
-                	scale = 0.3))*100)-1);
-            	probabiliyIndex = min(99, probabiliyIndex);
+                	scale = 0.3))*label_option*factor)-1);
+            	probabiliyIndex = min(label_option-1, probabiliyIndex);# ???
             	Labels[probabiliyIndex, ind] = 1;
     
             elapse_time = time.time() - start_time
@@ -128,7 +132,7 @@ def generateInstancesNN(instanceSize, step, plot_show = 1):
         ax[0].imshow(train)
         ax[0].set_title('Training Image')
         ax[1].imshow(np.reshape(np.sum( \
-            np.multiply(Labels.T,np.arange(100)).T,0),\
+            np.multiply(Labels.T,np.arange(label_option)).T,0),\
             (totalInstancesY,totalInstancesX)))
         ax[1].set_title('Labels')
         plt.show()
@@ -149,7 +153,6 @@ def gaussian2d(y, x, positiveLabels, scale = 0.2):
             , np.multiply(2, np.power(b,2))) 
     
     Pr = np.multiply(A, np.exp(-(powerX+powerY)))
-    
     return np.sum(Pr) 
 
 def poistiveLabelRegion():
@@ -305,11 +308,12 @@ def poistiveLabelRegion():
     [1650, 457, 51, 60]])
 def main():
      try:
-         instanceSize = 10;
-         step = 2;
+         instanceSize = 20;
+         step = 10;
          edge = 4;
          scale =10;
-         read_data_sets(instanceSize, step, plot_show = 1)
+	 label_option = 2;
+         read_data_sets(instanceSize, step, label_option, plot_show = 1)
  
      except KeyboardInterrupt:
          print "Shutdown requested... exiting"
