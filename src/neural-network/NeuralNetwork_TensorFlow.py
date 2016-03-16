@@ -93,12 +93,14 @@ def main():
       sess.run(init)
       
       #train
-      for i in range(batch_num*100):
+      for i in range(batch_num*1000):
         batch_xs, batch_ys = trainDS.train.next_batch(batch_size)
         feed = {x: batch_xs, y_: batch_ys, batch_index: i}
         sess.run([update_op_train, train_step], feed_dict=feed)
    
 	if i % 100 == 0:  # Record summary data
+	  if i % 1000 == 0:
+             print i
           result = sess.run([merged_train, \
                update_op_train, train_step], feed_dict=feed)
           writer.add_summary(result[0], i)

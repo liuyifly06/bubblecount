@@ -15,78 +15,65 @@ def ord_function(beta,x):
     
 def main():
     try:
-        data_filename = 'number.txt'
-        data = np.loadtxt(data_filename,skiprows=0)
-        cur = np.reshape(data,(41,3))
 
-        data_filename = 'skflow.txt'
-        data = np.loadtxt(data_filename,skiprows=0)
-        hough = np.reshape(data,(41,4))
-    
-        #emperical error    
-        xerr = np.sqrt(hough[:,0])/3
-        yerr_h = hough[:,2]
-	yerr_c = cur[:,2]
+        legend = ['curvature', 'neural-network', 'hough transform', 'SVM-Preliminary']
+	data_filename = ['number.txt', 'skflow.txt', 'curvature.txt', 'data.txt']
+        colors = ['blue', 'red', 'black', 'green']
 
-        data_h = Data(hough[:,0].T, hough[:,1].T, we = 1/(np.power(xerr.T,2)+np.spacing(1)), wd = 1/(np.power(yerr_h.T,2)+np.spacing(1)))
-        data_c = Data(cur[:,0].T, cur[:,1].T, we = 1/(np.power(xerr.T,2)+np.spacing(1)), wd = 1/(np.power(yerr_c.T,2)+np.spacing(1)))
-	
-        model = Model(ord_function)
-        odr_h = ODR(data_h, model, beta0=[0, 0])
-	odr_c = ODR(data_c, model, beta0=[0, 0])
-
-        odr_h.set_job(fit_type=2)
-	odr_c.set_job(fit_type=2)
-
-        output_h = odr_h.run()
-	output_c = odr_c.run()
-    
-        popt_h = output_h.beta
-        perr_h = output_h.sd_beta
-
-        popt_c = output_c.beta
-        perr_c = output_c.sd_beta
-        
- 	popt_h, pcov_h = curve_fit(linear_fit_function, hough[:,0], hough[:,1], [1, 0], hough[:, 2])
-        perr_h = np.sqrt(np.diag(pcov_h))
-
-# 	popt_c, pcov_c = curve_fit(linear_fit_function, cur[:,0], cur[:,1], [1, 0], cur[:, 2])
-#       perr_c = np.sqrt(np.diag(pcov_c))
-	
-	A = popt_h[0]/np.sqrt(popt_h[0]*popt_h[0]+1)
-	B = -1/np.sqrt(popt_h[0]*popt_h[0]+1)
-	C = popt_h[1]/np.sqrt(popt_h[0]*popt_h[0]+1)
-        fitting_error_h = np.mean(np.abs(A*hough[:,0]+B*hough[:,1]+C))
-	
-	A = popt_c[0]/np.sqrt(popt_c[0]*popt_c[0]+1)
-	B = -1/np.sqrt(popt_c[0]*popt_c[0]+1)
-	C = popt_c[1]/np.sqrt(popt_c[0]*popt_c[0]+1)
-	fitting_error_c = np.mean(np.abs(A*cur[:,0]+B*cur[:,1]+C))
-    
+        annotation_text = "function:  y = kx + b";
         fig, ax = plt.subplots(ncols = 1)
-        ax.errorbar(hough[:,0], hough[:,1], xerr = xerr, yerr = yerr_h, fmt='o',color='blue')
-	ax.errorbar(cur[:,0], cur[:,1], xerr = xerr, yerr = yerr_c, fmt='o',color='red')
-        
-	ax.plot(hough[:,0], popt_h[0]*hough[:,0]+popt_h[1], '-b',linewidth = 2)
-	ax.plot(cur[:,0], popt_c[0]*cur[:,0]+popt_c[1], '-r',linewidth = 2)
-    
-        bbox_props = dict(boxstyle="square,pad=0.3", fc="white", ec="black", lw=2)
+        for i in range(len(data_filename)):
+            temp = np.loadtxt(data_filename[i],skiprows=0)
+            data = np.reshape(temp,(41,len(temp)/41))
+            #print data
+            data[:,1:3] = np.true_divide(data[:,1:3], np.amax(data[:,1]))
+            data[:,1] = data[:,1]+i
+            #print data
+            #emperical error 
+            xerr = np.sqrt(data[:,0])/3
+            yerr = data[:,2]
+            data_fit = Data(data[:,0].T, data[:,1].T, \
+                          we = 1/(np.power(xerr.T,2)+np.spacing(1)),\
+                          wd = 1/(np.power(yerr.T,2)+np.spacing(1)))
 
-        annotation_text = "function:  y = kx + b \n" \
-        "Hough Transfrom (blue)\n"\
-	"k = %.2f b = %.2f Error = %.2f" % (popt_h[0], popt_h[1], fitting_error_h) + '\n'\
-        "Curvature Method (red)\n"\
-	"k = %.2f b = %.2f Error = %.2f" % (popt_c[0], popt_c[1], fitting_error_c)
-        
-	ax.text(10, max(np.amax(hough[:,1]), np.amax(cur[:,1]))+10, annotation_text, ha="left", va="top", rotation=0,
-    size=15, bbox=bbox_props)
+            model = Model(ord_function)
+            odr = ODR(data_fit, model, beta0=[0, 0])
+	    odr.set_job(fit_type=2)
+	    output = odr.run()
+            popt = output.beta
+            perr= output.sd_beta
+            popt, pcov = curve_fit(linear_fit_function, 
+                             data[:,0], data[:,1], [1, 0], data[:, 2])
+            perr = np.sqrt(np.diag(pcov))
+
+	    A = popt[0]/np.sqrt(popt[0]*popt[0]+1)
+	    B = -1/np.sqrt(popt[0]*popt[0]+1)
+	    C = popt[1]/np.sqrt(popt[0]*popt[0]+1)
+            fitting_error= np.mean(np.abs(A*data[:,0]+B*data[:,1]+C))
+
+            ax.errorbar(data[:,0], data[:,1], xerr = xerr,\
+                        yerr = yerr, fmt='o',color=colors[i])
+            ### not using error bar in fitting #########
+            popt[0],popt[1] = np.polyfit(data[:,0], data[:,1], 1)
+            ###
+            ax.plot(data[:,0], popt[0]*data[:,0]+popt[1], colors[i], linewidth = 2)
+            annotation_text = annotation_text + "\n" +\
+                              legend[i] + "(" + \
+                              colors[i] + ") \n" + \
+                              "k = %.2f b = %.2f Error = %.2f"%( \
+                              popt[0], popt[1], fitting_error) 
+                              
        
+        bbox_props = dict(boxstyle="square,pad=0.3", fc="white", ec="black", lw=2)
+	#ax.text(0, 4.15, annotation_text, ha="left", va="top", \
+        #        rotation=0, size=14, bbox=bbox_props)
+   
         ax.set_title('Algorithom Performance')
         ax.set_xlabel('Bubble Number Counted Manually')
-        ax.set_ylabel('Bubbble Number Counted by Algorithom')
+        ax.set_ylabel('Normalized Bubbble Number Counted by Algorithom')
         plt.grid()
-        plt.xlim((np.amin(hough[:,0])-5,np.amax(hough[:,0])+5))
-        plt.ylim((0,max(np.amax(hough[:,1]), np.amax(cur[:,1]))+20))
+        plt.xlim((np.amin(data[:,0])-5,np.amax(data[:,0])+5))
+        plt.ylim((0,np.amax(data[:,1])+0.2))
         plt.show()
   
     except KeyboardInterrupt:
