@@ -17,7 +17,7 @@ def main():
     try:
 
         legend = ['curvature', 'neural-network', 'hough transform', 'SVM-Preliminary']
-	data_filename = ['number.txt', 'skflow.txt', 'curvature.txt', 'data.txt']
+	data_filename = ['number.txt', 'skflow.txt', 'curvature.txt', 'SVM.txt']
         colors = ['blue', 'red', 'black', 'green']
 
         annotation_text = "function:  y = kx + b";
