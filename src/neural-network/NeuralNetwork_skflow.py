@@ -40,8 +40,8 @@ def main():
         hidden_units =[500,1000,500],
         n_classes = label_option,
         batch_size = 200000,
-        steps = 1,
-        learning_rate = 0.01)
+        steps = 1000,
+        learning_rate = 0.001)
 
       classifier.fit(trainDS.train.images, np.argmax(trainDS.train.labels, axis = 1))
    
