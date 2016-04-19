@@ -1,10 +1,10 @@
 # combine adaptive and globle thereshold method according to light change
-import sys, traceback, time
+import sys, traceback, time, curvature
 import numpy as np
 import os.path
 from ..PreProcess import preprocessing as pre
 from ..PreProcess.readinfo import getInfo
-import curvature
+from .. import GlobalVariables as gv
 from skimage.color import rgb2gray
 from skimage import io
 from matplotlib import pyplot as plt
@@ -18,10 +18,9 @@ def linear_fit_function(x, k, b):
 def ord_function(beta,x):
     return beta[0]*x + beta[1]
 
-def linearity(length = 123, data_filename = 'curvature.txt'):
-    directory = '/home/yi/Documents/bubble-counting/images/AfterPreprocessing/'
+def linearity(length = 123, data_filename = gv.cu__result_filename):
     start_time = time.time()
-    number = np.zeros((length,1))
+    result = np.zeros((length,1))
     index = -1
     for det in range(1,8):
         if (det!=6):
@@ -40,26 +39,30 @@ def linearity(length = 123, data_filename = 'curvature.txt'):
                 elapse_time = (time.time()-start_time)
                 if(elapse_time >= 1):
                     remain_time = elapse_time/index*41*3-elapse_time
-                    print 'Curvature analyzing .. ' + filename \
-                           +  time.strftime(" %H:%M:%S", time.gmtime(elapse_time)) \
-                           + ' has past. ' + 'Remaining time: ' \
-                           +  time.strftime(" %H:%M:%S", time.gmtime(remain_time))
+                    print 'Curvature analyzing .. ' + filename + \
+                          time.strftime(" %H:%M:%S", time.gmtime(elapse_time))\
+                          + ' has past. ' + 'Remaining time: ' + \
+                          time.strftime(" %H:%M:%S", time.gmtime(remain_time))
                 else:
-                    print 'Curvature analyzing .. ' + filename \
-                           +  time.strftime(" %H:%M:%S", time.gmtime(elapse_time)) \
-                           + ' has past'
+                    print 'Curvature analyzing .. ' + filename + \
+                          time.strftime(" %H:%M:%S", time.gmtime(elapse_time))\
+                          + ' has past'
 
-                image = rgb2gray(io.imread(directory+filename))
-                #ref = rgb2gray(io.imread(directory+refname))
+                #image = rgb2gray(io.imread(gv.__DIR__ + \
+                #                           gv.__TrainImageDir__ + \
+                #                           filename))
+                #ref = rgb2gray(io.imread(gv.__DIR__ + \
+                #                           gv.__TrainImageDir__ + \
+                #                           refname))
 
-                number[index] = curvature.count_bubble(image)
-                #temp[angle-1] = ellipse.count_bubble(image)
-    number.tofile(data_filename,sep=" ")
-    return number
+                result[index] = curvature.count_bubble(filename, plot_show = 1)
+
+    result.tofile(data_filename, sep=" ")
+    return result
 
 def main():
     try:
-        data_filename = 'curvature.txt'
+        data_filename = gv.cu__result_filename
         image_files, bubble_num, bubble_regions = getInfo()
         if not os.path.isfile(data_filename):
             number = linearity(len(image_files))

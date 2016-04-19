@@ -10,6 +10,7 @@ from skimage.filters.rank import median
 from skimage.morphology import disk
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from .. import GlobalVariables as gv
 
 # analyzing RGB image through each channel 
 @adapt_rgb(each_channel)
@@ -157,13 +158,12 @@ def interest_region(image, plot_image = 0, lid_thickness = 680, \
 
     return [interest_image, [bottom,top,left,right], rotate_angle*180]
 
-def test(bubble_filename,background_filename, Window_Size = 5, plot_image = 1):
+def test(bubble_filename, background_filename, Window_Size = 5, plot_image = 1):
     # Load Image
-    directory  = '../../images/'
     print 'Start reading images: \n    ' + bubble_filename
-    image = io.imread(directory + bubble_filename)
+    image = io.imread(gv.__DIR__ + gv.pp__image_dir + bubble_filename)
     print '    ' +  background_filename
-    background = io.imread(directory + background_filename)
+    background = io.imread(gv.__DIR__ + gv.pp__image_dir + background_filename)
     print 'Pre processing .. '  
     pre_image = noise_reduction(image, background, Window_Size, 0)
     interest_image = interest_region(image, plot_image = 1, \
@@ -182,15 +182,14 @@ def test(bubble_filename,background_filename, Window_Size = 5, plot_image = 1):
         plt.show()
 
 def batch_process():
-    labeling_file = '../../images/positiveInstances.dat'
-    directory  = '../../images/AfterPreprocessing/'
-    f_read = open(labeling_file, 'r')
-    f_write = open(directory + 'positiveInstances.dat', 'w')
+    f_read = open(gv.__DIR__ + gv.pp__image_dir + 'positiveInstances.dat', 'r')
+    f_write = open(gv.__DIR__+ gv.pp__result_dir+ 'positiveInstances.dat', 'w')
+
     for line in f_read:
         line_list = line.split()
         image_file = line_list[0]
         print 'Processing ' + image_file
-        image = io.imread(directory + '../' +image_file)
+        image = io.imread(gv.__DIR__ + gv.pp__image_dir + image_file)
 
         [interest_image, margin, angle] = interest_region(image, \
                             plot_image = 0, lid_thickness = 630, \
@@ -216,7 +215,8 @@ def batch_process():
            y2 = y1 + int(line_list[4*i+5])
            
            rotated_box = np.dot(rotation_matrix, \
-              np.array([[x1-origin_x, x2-origin_x], [y1-origin_y, y2-origin_y]])) 
+                                np.array([[x1-origin_x, x2-origin_x], \
+                                          [y1-origin_y, y2-origin_y]])) 
            [[x1, x2], [y1, y2]] = np.add(rotated_box.astype(int),
               np.array([[origin_x, origin_x],[origin_y, origin_y]]))
            
@@ -231,7 +231,8 @@ def batch_process():
                new_y2 = int(min(max(y2 - margin[0], 0), margin[1]-margin[0]))
                
                minmium_size = 5
-               if(new_x2 - new_x1 >= minmium_size and  new_y2 - new_y1 >= minmium_size):
+               if(new_x2 - new_x1 >= minmium_size and \
+                  new_y2 - new_y1 >= minmium_size):
                    regions.append(new_x1)
                    regions.append(new_y1)
                    regions.append(new_x2 - new_x1)
@@ -239,7 +240,7 @@ def batch_process():
                    num = num + 1
                    #interest_image[new_y1:new_y2, new_x1:new_x2, 0] = 1 
 
-        io.imsave(directory + image_file, interest_image) 
+        io.imsave(gv.__DIR__+ gv.pp__result_dir + image_file, interest_image) 
         f_write.write(image_file)
         f_write.write(' ' + str(num))
         

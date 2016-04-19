@@ -1,9 +1,10 @@
 import sys, traceback, time
 import numpy as np
 from matplotlib import pyplot as plt
+from .. import GlobalVariables as gv
 
-def getInfo(filename = \
-'/home/yi/Documents/bubble-counting/images/AfterPreprocessing/positiveInstances.dat'):
+def getInfo(filename = gv.__DIR__ + gv.__TrainImageDir__ + \
+            'positiveInstances.dat'):
     f_read = open(filename, 'r')
     image_files    = []
     bubble_num     = np.array([])
