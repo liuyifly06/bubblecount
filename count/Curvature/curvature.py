@@ -235,8 +235,11 @@ def perimeter_exaction(image, original_image, image_filename = 'test.jpg', \
     freq_thre = 0.002 # hamming window width
     # mutiple curve with same circle situation
 
-    result_show_image = original_image
+    result_show_image = np.copy(original_image)
     for n, contour in enumerate(contours):
+        result_show_image[contour.astype(int)[:,0], \
+                          contour.astype(int)[:,1]] = (20, 220, 20)
+
         [c_length,c_width] = contour.shape
         seg = []
         seg_der = []
@@ -339,10 +342,9 @@ def perimeter_exaction(image, original_image, image_filename = 'test.jpg', \
                 dx.plot(c_index,dfs[c_index],'*')
                 dx.set_title('Derivative of Curvature')
                 plt.show()
-    
-    result_show_image[image > 0] = (20, 220, 20)
+
     for xyr in perimeter:
-        cx, cy = circle_perimeter(int(xyr[1]), int(xyr[0]), int(xyr[2]))
+        cx, cy = circle_perimeter(int(xyr[0]), int(xyr[1]), int(xyr[2]))
         [ylimit, xlimit, climit] = result_show_image.shape
         ind = np.all([np.all([cy < ylimit, cy >= 0], axis = 0), \
                         np.all([cx < xlimit, cx >= 0], axis = 0)],\
@@ -422,37 +424,36 @@ def segmentation(image, method='otsu'):
     
     return labels
 
-def count_bubble(image_filename, plot_show = 0):
+def count_bubble(image_filename, ref_filename, plot_show = 0):
     
     image = io.imread(gv.__DIR__ + gv.__TrainImageDir__ + \
-                               image_filename)
+                      image_filename)
+    ref_image = io.imread(gv.__DIR__ + gv.__TrainImageDir__ + \
+                      ref_filename)
+
+    image_gray = rgb2gray(image)
+    ref_gray = rgb2gray(ref_image)
 
     # Constants
-    Radius_Template        = 25
-    Sigma_Gaussian_Filter  = 2
-    Sigma_Canny_Filter     = 5
-    Window_Size            = 5
+    Window_Size = 5
            
-    # part_image, region, angle = pre.interest_region(image, plot_image = 0)
-    # ref_rotate = rotate(ref,angle)
-    # part_ref = ref_rotate[region[0]:region[1], region[2]:region[3]]
-    # pre_image = pre.noise_reduction(part_image, part_ref, Window_Size, mode = 0)
-        
-    seg_image = segmentation(rgb2gray(image),'self_design')
-    perimeters = perimeter_exaction(seg_image, image, image_filename)
+    pre_image = pre.noise_reduction(image_gray, ref_gray, Window_Size, mode = 0)        
     
+    seg_image = segmentation(pre_image,'self_design')
+    perimeters = perimeter_exaction(seg_image, image, image_filename)
+
     if(plot_show == 1):
         fig, ax = plt.subplots(1,3)
         ax[0].imshow(image)
         ax[0].set_title('Original')
-        ax[1].imshow(seg_image)
+        ax[1].imshow(seg_image, cmap=plt.cm.gray)
         ax[1].set_title('Segmentation')
         result = io.imread(gv.__DIR__ + gv.cu__image_dir + image_filename)
         ax[2].imshow(result)
         ax[2].set_title('Result')
         plt.show()
         
-    return len(perimeters)
+    return perimeters
 
 def main():
     try:

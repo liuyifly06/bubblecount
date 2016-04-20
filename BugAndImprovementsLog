@@ -1,5 +1,5 @@
-1. curvature with background and median filter (currently have no median filter)
+1. curvature method: filter with curve percentage ?
+2. reusult with numbers fill into a region ?
 2. why curvature method and hough transform method perform so bad ? give example, make it possible for paper
 3. improve houghtransform svm and the neuralnetwork
 
-4  curvature not working propertly 

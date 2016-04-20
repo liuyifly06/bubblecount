@@ -103,7 +103,7 @@ def interest_region(image, plot_image = 0, lid_thickness = 680, \
         top = top - side_thickness
         
     image_rotation = rotate(image, rotate_angle*180)        
-    interest_image = image_rotation[bottom:top, left:right];
+    interest_image = image_rotation[bottom:top, left:right]
     
     if(plot_image == 1):
         fig, ax = plt.subplots(2,3)
@@ -188,13 +188,21 @@ def batch_process():
     for line in f_read:
         line_list = line.split()
         image_file = line_list[0]
+        ref_file   = image_file[0:15] + '_background.jpg'
+        ref_save_name = image_file[0:23] + '_background.jpg'
+
         print 'Processing ' + image_file
         image = io.imread(gv.__DIR__ + gv.pp__image_dir + image_file)
+        ref   = io.imread(gv.__DIR__ + gv.pp__image_dir + ref_file)
 
         [interest_image, margin, angle] = interest_region(image, \
                             plot_image = 0, lid_thickness = 630, \
                         bot_thickness = 50, side_thickness = 40,\
                                          th_x = 0.5, th_y = 0.5)
+        # generate background
+        ref = rotate(ref, angle)
+        ref = ref[margin[0]:margin[1], margin[2]:margin[3]]
+
         # rotation of labeling box
         origin_y = (image.shape[0]-1)/2
         origin_x = (image.shape[1]-1)/2
@@ -238,8 +246,9 @@ def batch_process():
                    regions.append(new_x2 - new_x1)
                    regions.append(new_y2 - new_y1)
                    num = num + 1
-                   #interest_image[new_y1:new_y2, new_x1:new_x2, 0] = 1 
+                   #interest_image[new_y1:new_y2, new_x1:new_x2, 0] = 1
 
+        io.imsave(gv.__DIR__+ gv.pp__result_dir + ref_save_name, ref) 
         io.imsave(gv.__DIR__+ gv.pp__result_dir + image_file, interest_image) 
         f_write.write(image_file)
         f_write.write(' ' + str(num))
