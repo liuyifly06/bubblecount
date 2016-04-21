@@ -2,6 +2,7 @@
 # Skflow use google machine learning tool TensorFlow
 
 import sys, traceback, time, random, skflow
+import os.path
 import numpy as np
 import tensorflow as tf
 import dataSet as ds
@@ -22,21 +23,21 @@ def displayTime(str_process ,elap_time, rema_time):
             time.strftime(" %H:%M:%S", time.gmtime(elap_time)) + \
                       '|| Time Remaining : ' + \
             time.strftime(" %H:%M:%S", time.gmtime(rema_time))
-def train(_steps = 500, _batch_size = 20000, _learning_rate = 0.001, \
-          _layers = [500, 1000, 500], ins_size = 20, step = 4, \
-          label_option = 100):
+def train(_steps = 500, _batch_size = 200000, _learning_rate = 0.001, \
+          _layers = [500, 1000, 500], _ins_size = 20, _step = 4, \
+          _label_option = 100):
     random.seed(42)
-    trainDS = ds.read_data_sets(ins_size, step, label_option, 'train');
+    trainDS = ds.read_data_sets(_ins_size, _step, _label_option, 'train');
     classifier = skflow.TensorFlowDNNClassifier(
         hidden_units = _layers,
-        n_classes = label_option,
+        n_classes = _label_option,
         batch_size = _batch_size,
         steps = _steps,
         learning_rate = _learning_rate)
     classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1))
     return classifier
 
-def test(classifier, ins_size = 20, step = 4, label_option = 100):
+def test(classifier, _ins_size = 20, _step = 4, _label_option = 100):
     image_files, bubble_num, bubble_regions = getInfo()
 
     result_filename   = gv.dp__result_filename
@@ -49,7 +50,7 @@ def test(classifier, ins_size = 20, step = 4, label_option = 100):
     start_time = time.time()
 
     for image_file in image_files:
-        testDS = ds.read_data_sets(ins_size, step, label_option, \
+        testDS = ds.read_data_sets(_ins_size, _step, _label_option, \
                                      'test', imageName = image_file)
         y = classifier.predict(testDS.images)
         index = index + 1
@@ -92,16 +93,23 @@ def test(classifier, ins_size = 20, step = 4, label_option = 100):
     return [result, accuracy]
 
 def main():
-    try:
-          
-        ins_size = 20
-        step = 10
-        label_option = 100
-        #training data
-        classifier = train(_steps = 1, ins_size, step, label_option)
-        result, accuracy = test(classifier, ins_size, step, label_option)
+    try:      
+        image_files, bubble_num, bubble_regions = getInfo()
+        if not os.path.isfile(gv.dp__result_filename):
+            ins_size = 20
+            step = 4
+            label_option = 100
+            #training data
+            classifier = train(_steps = 10000, _batch_size = 20000, \
+                               _learning_rate = 0.01, \
+                               _ins_size = ins_size, _step = step, \
+                               _label_option = label_option)
+            result, accuracy = test(classifier, ins_size, step, label_option)
+        result = np.loadtxt(gv.dp__result_filename)
+        accuracy = np.loadtxt(gv.dp__accuracy_filename)
+        accuracy = np.reshape(accuracy, (len(accuracy)/4,4))
         fig, ax = plt.subplots(1,2)
-        ax[0].plot(result)
+        ax[0].scatter(bubble_num,result)
         ax[1].plot(accuracy)
         plt.show()
     except KeyboardInterrupt:
