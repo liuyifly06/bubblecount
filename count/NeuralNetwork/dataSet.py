@@ -77,17 +77,28 @@ def read_data_sets(instanceSize, step, label_option, mode, imageName = '', \
     class DataSets(object):
         pass
     data_sets = DataSets()
-    assert(mode == 'train' or mode == 'test')
-    if mode == 'train':
-        filenameList = gv.__TrainImage__
-    elif mode == 'test':
-        filenameList = [imageName]
 
-    [train_images, train_labels, ylen, xlen] = \
-        generateInstancesNN(instanceSize, step, label_option, \
+    assert(mode == 'd-train' or mode == 'd-test' or \
+           mode == 'c-train' or mode == 'c-test')
+
+    if 'train' in mode:
+        filenameList = gv.__TrainImage__
+    elif 'test' in mode:
+        filenameList = [imageName]
+    
+    if 'd' in mode:
+        [images, labels, ylen, xlen] = \
+            generateInstancesNN(instanceSize, step, label_option, \
                             filenameList, plot_show)
-    data_sets = DataSet(train_images, train_labels, \
-                        xlen, ylen, dtype=dtype)
+        data_sets = DataSet(images, labels, \
+                            xlen, ylen, dtype=dtype)
+    elif 'c' in mode:
+        [images, labels, ylen, xlen] = \
+            generateInstancesNN(instanceSize, step, label_option, \
+                            filenameList, plot_show)
+        data_sets = DataSet(images, labels, \
+                            xlen, ylen, dtype=dtype)
+
     return data_sets
 
 def generateInstancesNN(instanceSize, step, label_option, \

@@ -23,21 +23,23 @@ def displayTime(str_process ,elap_time, rema_time):
             time.strftime(" %H:%M:%S", time.gmtime(elap_time)) + \
                       '|| Time Remaining : ' + \
             time.strftime(" %H:%M:%S", time.gmtime(rema_time))
-def train(_steps = 500, _batch_size = 200000, _learning_rate = 0.001, \
-          _layers = [500, 1000, 500], _ins_size = 20, _step = 4, \
-          _label_option = 100):
+def train(batchNum = 500, batchSize = 200000, learningRate = 0.001, \
+          layers = [500, 1000, 500], ImagePatchWidth = 20, \
+          ImagePatchStep = 4, labelOptionNum = 100):
     random.seed(42)
-    trainDS = ds.read_data_sets(_ins_size, _step, _label_option, 'train');
+    trainDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep, \
+                                labelOptionNum, 'd-train');
     classifier = skflow.TensorFlowDNNClassifier(
-        hidden_units = _layers,
-        n_classes = _label_option,
-        batch_size = _batch_size,
-        steps = _steps,
-        learning_rate = _learning_rate)
+        hidden_units = layers,
+        n_classes = labelOptionNum,
+        batch_size = batchSize,
+        steps = batchNum,
+        learning_rate = learningRate)
     classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1))
     return classifier
 
-def test(classifier, _ins_size = 20, _step = 4, _label_option = 100):
+def test(classifier, ImagePatchWidth = 20, \
+         ImagePatchStep = 4, labelOptionNum = 100):
     image_files, bubble_num, bubble_regions = getInfo()
 
     result_filename   = gv.dp__result_filename
@@ -50,8 +52,9 @@ def test(classifier, _ins_size = 20, _step = 4, _label_option = 100):
     start_time = time.time()
 
     for image_file in image_files:
-        testDS = ds.read_data_sets(_ins_size, _step, _label_option, \
-                                     'test', imageName = image_file)
+        testDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep, \
+                                   labelOptionNum, 'd-test', \
+                                   imageName = image_file)
         y = classifier.predict(testDS.images)
         index = index + 1
         result[index] = np.sum(y)
@@ -100,10 +103,12 @@ def main():
             step = 4
             label_option = 100
             #training data
-            classifier = train(_steps = 10000, _batch_size = 20000, \
-                               _learning_rate = 0.01, \
-                               _ins_size = ins_size, _step = step, \
-                               _label_option = label_option)
+            classifier = train(batchNum = 10000, \
+                               batchSize = 20000, \
+                               learningRate = 0.01, \
+                               ImagePatchWidth=ins_size, \
+                               ImagePatchStep = step, \
+                               labelOptionNum = label_option)
             result, accuracy = test(classifier, ins_size, step, label_option)
         result = np.loadtxt(gv.dp__result_filename)
         accuracy = np.loadtxt(gv.dp__accuracy_filename)
