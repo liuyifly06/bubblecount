@@ -12,10 +12,16 @@ __TrainImageDir__ = '/images/AfterPreprocessing/'
 pp__image_dir = '/images/original/'
 pp__result_dir = __TrainImageDir__
 
-#deeplearning
+#NeuralNetwork
+tensorflow_log_dir = '/result/logs/'
+#deeplearning 
 dp__image_dir = '/images/deepLearning/'
 dp__result_filename = 'deepLearningResult.txt'
 dp__accuracy_filename = 'deepLearningAccuracy.txt'
+#convolutional
+cnn__image_dir = '/images/convolutionalNN/'
+cnn__result_filename = 'convolutionalNNResult.txt'
+cnn__accuracy_filename = 'convolutionalNNAccuracy.txt'
 
 #curvature
 cu__image_dir = '/images/curvature/'

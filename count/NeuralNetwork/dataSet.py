@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from skimage import io
 from ..PreProcess.readinfo import getInfo
 from .. import GlobalVariables as gv
+from ..ProgressBar import progress
 
 class DataSet(object):
     def __init__(self, images, labels, xlength, ylength, dtype=tf.float32):
@@ -71,33 +72,26 @@ class DataSet(object):
         end = self._index_in_epoch
         return self._images[start:end], self._labels[start:end]
 
-def read_data_sets(instanceSize, step, numOfClasses, mode, imageName = '',
-                   dtype=tf.float32, plot_show = 0):
+def read_data_sets(instanceSize, step, numOfClasses, instanceMode, 
+                   labelMode, imageName = '', dtype=tf.float32,
+                   plot_show = 0):
     class DataSets(object):
         pass
     data_sets = DataSets()
 
-    assert(mode == 'd-train' or mode == 'd-test' or
-           mode == 'c-train' or mode == 'c-test')
-
-    if 'train' in mode:
+    assert(instanceMode == 'train' or instanceMode == 'test')
+    if 'train' in instanceMode:
         filenameList = gv.__TrainImage__ 
-    elif 'test' in mode:
+    elif 'test' in instanceMode:
         filenameList = [imageName]
-    
-    if 'd' in mode:
-        [images, labels, ylen, xlen] = generateInstancesDNN(instanceSize, 
-                step, numOfClasses, filenameList, plot_show)
-        data_sets = DataSet(images, labels, xlen, ylen, dtype=dtype)
-    elif 'c' in mode:
-        [images, labels, ylen, xlen] = generateInstancesCNN(instanceSize,
-                step, numOfClasses, filenameList, plot_show)
-        data_sets = DataSet(images, labels, xlen, ylen, dtype=dtype)
 
+    [images, labels, ylen, xlen] = generateInstancesNN(instanceSize, 
+                step, numOfClasses, filenameList, labelMode, plot_show)
+    data_sets = DataSet(images, labels, xlen, ylen, dtype=dtype)
     return data_sets
 
-def generateInstancesCNN(instanceSize, step, numOfClasses, filenameList, 
-                         plot_show = 1):
+def generateInstancesNN(instanceSize, step, numOfClasses, filenameList, 
+                        mode, plot_show = 1):
 
     allInstances = np.array([])
     allLabels    = np.array([])
@@ -105,10 +99,12 @@ def generateInstancesCNN(instanceSize, step, numOfClasses, filenameList,
     ylen = 0
 
     image_files, bubble_num, bubble_regions = getInfo()
-    for imageFilename in filenameList:
+
+    for i, imageFilename in enumerate(filenameList):
         print ('Generating instances from [' + imageFilename + 
                ']... { patch width: ' + str(instanceSize) + ' step: ' + 
                str(step) + ' }')
+
         filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
         imageData = io.imread(filename)
         
@@ -123,16 +119,19 @@ def generateInstancesCNN(instanceSize, step, numOfClasses, filenameList,
     
         ylen = len(Y)
         xlen = len(X)
-        image_show = np.zeros((ylen, xlen))
 
-        progressRatePrevious = 0
+        image_show = np.zeros((ylen, xlen))
 
         instances = np.zeros((instanceSize ** 2 * c, xlen * ylen ))
         labels = np.zeros((numOfClasses, xlen * ylen))
 
-        ind = -1
-    
+        ind = -1    
         start_time = time.time()
+
+        PROGRESS = progress.progress(0, xlen*ylen,
+            prefix_info = imageFilename,
+            suffix_info = str(i+1)+'/'+str(len(filenameList)) )
+
         for iy, currentY in enumerate(Y):
             for ix, currentX in enumerate(X):      
        
@@ -140,113 +139,28 @@ def generateInstancesCNN(instanceSize, step, numOfClasses, filenameList,
                 boundaryD = currentY + np.floor(instanceSize/2)
                 boundaryL = currentX - np.floor(instanceSize/2)
                 boundaryR = currentX + np.floor(instanceSize/2)
-                box = [boundaryT, boundaryD, boundaryL, boundaryR]
-                
+
                 ind = ind + 1
                 temp = imageData[boundaryT:boundaryD, boundaryL:boundaryR, :]
                 instances[:, ind] = np.reshape(temp,(instanceSize**2*c, 1)).T
                 
-                bubbleNums = numberOfBubbles(box, positiveLabels)
-                bubbleNums = min(numOfClasses-1, bubbleNums)
-                image_show[iy, ix] = int(bubbleNums)
-            	labels[bubbleNums, ind] = 1;
-    
-            elapse_time = time.time() - start_time
-            progressRate = np.true_divide(ind, xlen*ylen) * 100
-            remain_time = np.true_divide(elapse_time,
-                                         progressRate) * 100 - elapse_time
-            progressRate = np.floor(np.true_divide(progressRate, 10))
-            if (progressRate > progressRatePrevious):
-                print (str(progressRate*10)+ 
-                       '% train instances created, remaining time: '+
-                       time.strftime(" %H:%M:%S", time.gmtime(remain_time)))
-            progressRatePrevious = progressRate
-        
-        # append current instance data to all instance data
-        if allInstances.size == 0:
-            allInstances = instances.T
-            allLabels = labels.T
-        else:
-            allInstances = np.append(allInstances, instances.T, axis=0)
-            allLabels = np.append(allLabels, labels.T, axis=0)
-
-        if(plot_show == 1):
-            fig, ax = plt.subplots(2)
-            ax[0].imshow(imageData)
-            ax[0].set_title('Original Image')
-            img = ax[1].imshow(image_show)
-            ax[1].set_title('Labels')
-            plt.colorbar(img)
-            plt.show()
-
-    return [allInstances, allLabels, ylen, xlen]
-
-def generateInstancesDNN(instanceSize, step, numOfClasses, filenameList, 
-                         plot_show = 1):
-
-    allInstances = np.array([])
-    allLabels    = np.array([])
-    xlen = 0
-    ylen = 0
-
-    image_files, bubble_num, bubble_regions = getInfo()
-    for imageFilename in filenameList:
-        print ('Generating instances from [' + imageFilename + 
-               ']... { patch width: ' + str(instanceSize) + ' step: ' + 
-               str(step) + ' }')
-        filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
-        imageData = io.imread(filename)
-        
-        positiveLabels = bubble_regions[image_files.index(imageFilename)]
-
-        [m,n,c] = imageData.shape
-
-        Y = np.arange(np.floor(instanceSize/2), 
-                      (m - np.ceil(instanceSize/2)), step)
-        X = np.arange(np.floor(instanceSize/2),
-                      (n - np.ceil(instanceSize/2)), step)
-    
-        ylen = len(Y)
-        xlen = len(X)
-        image_show = np.zeros((ylen, xlen))
-
-        progressRatePrevious = 0
-
-        instances = np.zeros((instanceSize ** 2 * c, xlen * ylen ))
-        labels = np.zeros((numOfClasses, xlen * ylen))
-
-        ind = -1
-    
-        start_time = time.time()
-        for iy, currentY in enumerate(Y):
-            for ix, currentX in enumerate(X):      
-       
-                boundaryT = currentY - np.floor(instanceSize/2)
-                boundaryD = currentY + np.floor(instanceSize/2)
-                boundaryL = currentX - np.floor(instanceSize/2)
-                boundaryR = currentX + np.floor(instanceSize/2)
-        
-                ind = ind + 1
-                temp = imageData[boundaryT:boundaryD, boundaryL:boundaryR, :]
-                instances[:, ind] = np.reshape(temp,(instanceSize**2*c, 1)).T
-                
-                probabiliyIndex = gaussian2d(currentY, currentX,
+                assert (mode == 'NUM' or mode == 'PRO')
+                if  (mode == 'PRO'):
+                    probabiliyIndex = gaussian2d(currentY, currentX,
                     positiveLabels, scale = 0.3) * (numOfClasses/2 + 2)
-                probabiliyIndex = min(numOfClasses-1, probabiliyIndex)
-                image_show[iy, ix] = int(probabiliyIndex)
-            	labels[probabiliyIndex, ind] = 1;
-    
-            elapse_time = time.time() - start_time
-            progressRate = np.true_divide(ind, xlen*ylen) * 100
-            remain_time = np.true_divide(elapse_time,
-                                         progressRate) * 100 - elapse_time
-            progressRate = np.floor(np.true_divide(progressRate, 10))
-            if (progressRate > progressRatePrevious):
-                print (str(progressRate*10)+ 
-                       '% train instances created, remaining time: '+
-                       time.strftime(" %H:%M:%S", time.gmtime(remain_time)))
-            progressRatePrevious = progressRate
-        
+                    probabiliyIndex = min(numOfClasses-1, probabiliyIndex)
+                    image_show[iy, ix] = int(probabiliyIndex)               
+                    labels[probabiliyIndex, ind] = 1
+                elif(mode == 'NUM'):
+                    box = [boundaryT, boundaryD, boundaryL, boundaryR]
+                    bubbleNums = numberOfBubbles(box, positiveLabels)
+                    bubbleNums = min(numOfClasses-1, bubbleNums)
+                    image_show[iy, ix] = np.around(bubbleNums * 
+                                             max(1, numOfClasses/10))                
+            	    labels[bubbleNums, ind] = 1;
+                PROGRESS.setCurrentIteration(ix + iy*xlen + 1)
+                PROGRESS.printProgress()
+
         # append current instance data to all instance data
         if allInstances.size == 0:
             allInstances = instances.T
@@ -284,45 +198,40 @@ def gaussian2d(y, x, positiveLabels, scale = 0.2):
 
 def numberOfBubbles(box, positiveLabels):
     bubbleNum = 0
+
     area = np.multiply(positiveLabels[:,2], positiveLabels[:,3])
-    region = np.array([positiveLabels[:,0],
-                        positiveLabels[:,0] + positiveLabels[:,2],
-                        positiveLabels[:,1],
-                        positiveLabels[:,1] + positiveLabels[:,3]]).T
+
+    region = np.array([positiveLabels[:,1],
+                       positiveLabels[:,1] + positiveLabels[:,3],
+                       positiveLabels[:,0],
+                       positiveLabels[:,0] + positiveLabels[:,2]]).T
 
     index = np.all([np.logical_not(np.any(
            [region[:,0] >= box[1], region[:,1] <= box[0]], axis = 0)),
-           np.logical_not(np.any(
+                    np.logical_not(np.any(
            [region[:,2] >= box[3], region[:,3] <= box[2]], axis = 0))],
            axis = 0)
-    print [box, region, index]
-    Yedge = np.amin(np.array(
-                    [np.absolute(np.subtract(region[index, 0],box[1])),
-                     np.absolute(np.subtract(region[index, 1],box[0])),
-                     np.ones((np.sum(index),1))*(box[1] - box[0]),
-                     region[index, 1] - region[index, 0]]), axis = 1)
-
-    Xedge = np.amin([np.absolute(np.subtract(region[index, 2], box[3])),
-                     np.absolute(np.subtract(region[index, 3], box[2])),
-                     np.ones((np.sum(index),1))*(box[3] - box[2]),
-                     region[index, 3] - region[index, 2]], axis = 1)
     
-    return np.sum(np.true_divide(np.multiply(Xedge, Yedge), area[index]))
-    """
-    for i, label in enumerate(positiveLabels):
-        intervalX1 = np.array([box[2], box[3]])
-        intervalX2 = np.array([positiveLabels[:,1],
-                      positiveLabels[:,1] + positiveLabels[:,3]])
-        Xedge = intervalOverlap(intervalX1, intervalX2)
+    if(np.sum(index)==0):
+        return 0
+    edge = np.ones((np.sum(index), 4))
+    
+    edge[:,0] = np.absolute(np.subtract(region[index, 0], box[1]))
+    edge[:,1] = np.absolute(np.subtract(region[index, 1], box[0]))
+    edge[:,2] = box[1] - box[0]
+    edge[:,3] = region[index, 1] - region[index, 0]
 
-        intervalY1 = np.array([box[0], box[1]])
-        intervalY2 = np.array([positiveLabels[:,0],
-                      positiveLabels[:,0] + positiveLabels[:,2]])
-        Yedge = intervalOverlap(intervalY1, intervalY2)
+    Yedge = np.amin(edge, axis = 1)
 
-        bubbleNum =  bubbleNum + Xedge*Yedge/2
-    return np.around(bubbleNum)
-    """
+    edge[:,0] = np.absolute(np.subtract(region[index, 2], box[3]))
+    edge[:,1] = np.absolute(np.subtract(region[index, 3], box[2]))
+    edge[:,2] = box[3] - box[2]
+    edge[:,3] = region[index, 3] - region[index, 2]
+
+    Xedge = np.amin(edge, axis = 1)
+    
+    bubbleIncludes = np.true_divide(np.multiply(Xedge, Yedge), area[index])   
+    return np.sum(bubbleIncludes)
 
 def intervalOverlap(interval1, interval2):
     if(np.any([interval1[0] >= interval2[1], interval1[1] <= interval2[0]])):
@@ -337,9 +246,13 @@ def main():
          edge = 4;
          scale =10;
 	 numOfClasses = 100;
-         read_data_sets(instanceSize, step, numOfClasses, 'c-train',
+         read_data_sets(instanceSize, step, numOfClasses, 'train', 'PRO',
                         plot_show = 1)
-         read_data_sets(instanceSize, step, numOfClasses, 'c-test',
+         read_data_sets(instanceSize, step, numOfClasses, 'test',  'PRO',
+                        'detector_1_no_5_angle_3.jpg', plot_show = 1)
+         read_data_sets(instanceSize, step, numOfClasses, 'train', 'NUM',
+                        plot_show = 1)
+         read_data_sets(instanceSize, step, numOfClasses, 'test',  'NUM',
                         'detector_1_no_5_angle_3.jpg', plot_show = 1)
      except KeyboardInterrupt:
          print "Shutdown requested... exiting"
