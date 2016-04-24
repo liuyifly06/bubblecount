@@ -241,8 +241,8 @@ def intervalOverlap(interval1, interval2):
 
 def main():
      try:
-         instanceSize = 100;
-         step = 10;
+         instanceSize = 50;
+         step = 5;
          edge = 4;
          scale =10;
 	 numOfClasses = 100;

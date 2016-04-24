@@ -70,7 +70,8 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
         PROGRESS.setCurrentIteration(i+1)
         PROGRESS.setInfo(suffix_info = image_file)
         PROGRESS.printProgress()
-    accuracy.tofile(accuracy_filename, sep =" ")
+    accuracy.tofile(accuracy_filename, sep = " ")
+    result.tofile(result_filename, sep = " ")
     return [result, accuracy]
     
 def main():
