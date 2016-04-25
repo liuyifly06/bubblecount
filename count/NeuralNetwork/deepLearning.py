@@ -5,8 +5,8 @@ import sys, traceback, time, skflow
 import os.path
 import numpy as np
 import dataSet as ds
-from skimage import io
 import tensorflow as tf
+from skimage import io
 from scipy.stats import linregress
 from matplotlib import pyplot as plt
 from .. import GlobalVariables as gv

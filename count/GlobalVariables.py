@@ -1,5 +1,6 @@
+import os
 #dirctory of python package
-__DIR__ = '/home/yi/Documents/bubble-counting'
+__DIR__ = os.path.dirname(os.path.realpath(__file__)) + '/..'
 
 #Train Images
 __TrainImage__ = [ \
