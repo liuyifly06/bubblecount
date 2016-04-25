@@ -18,6 +18,8 @@ tensorflow_log_dir = '/result/logs/'
 dp__image_dir = '/images/deepLearning/'
 dp__result_filename = 'deepLearningResult.txt'
 dp__accuracy_filename = 'deepLearningAccuracy.txt'
+dp__tuningPar_dir = '/result/deepLearning/'
+dp__tuningPar_filename = 'deepLearningParTune.dat'
 #convolutional
 cnn__image_dir = '/images/convolutionalNN/'
 cnn__result_filename = 'convolutionalNNResult.txt'

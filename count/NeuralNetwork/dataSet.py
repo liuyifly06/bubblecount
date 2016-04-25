@@ -154,10 +154,10 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
                 elif(mode == 'NUM'):
                     box = [boundaryT, boundaryD, boundaryL, boundaryR]
                     bubbleNums = numberOfBubbles(box, positiveLabels)
+                    bubbleNums = bubbleNums * max(1, numOfClasses/10)
                     bubbleNums = min(numOfClasses-1, bubbleNums)
-                    image_show[iy, ix] = np.around(bubbleNums * 
-                                             max(1, numOfClasses/10))                
-            	    labels[bubbleNums, ind] = 1;
+                    image_show[iy, ix] = np.around(bubbleNums)                
+            	    labels[int(bubbleNums), ind] = 1;
                 PROGRESS.setCurrentIteration(ix + iy*xlen + 1)
                 PROGRESS.printProgress()
 

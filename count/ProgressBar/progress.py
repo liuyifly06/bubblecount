@@ -5,12 +5,12 @@ class progress(object):
     total = 100
     prefix = ''
     suffix = ''
-    decimals = 2
+    decimals = 1
     barLength = 10
     startTime = time.time()
 
     def __init__(self, current_iteration, total_iterations, prefix_info = '',
-                 suffix_info = '', num_decimals = 2, length = 10):
+                 suffix_info = '', num_decimals = 1, length = 10):
         self.iteration = current_iteration
         self.total = total_iterations
         self.prefix = prefix_info
@@ -22,7 +22,7 @@ class progress(object):
     def setTotalIterations(self, total_iterations):
         self.total = total_iterations
 
-    def setDisplay(self, num_decimals = 2, length = 100):
+    def setDisplay(self, num_decimals = 1, length = 100):
         self.decimals = num_decimals
         self.barLength = length        
     
