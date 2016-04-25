@@ -4,11 +4,11 @@
 import sys, traceback, time, skflow
 import os.path
 import numpy as np
-import tensorflow as tf
 import dataSet as ds
 from scipy.stats import linregress
 from matplotlib import pyplot as plt
 from skimage import io
+import tensorflow as tf
 from .. import GlobalVariables as gv
 from ..PreProcess.readinfo import getInfo
 from ..ProgressBar import progress
