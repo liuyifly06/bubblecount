@@ -4,11 +4,11 @@
 import sys, traceback, time, skflow
 import os.path
 import numpy as np
-import tensorflow as tf
 import dataSet as ds
+from skimage import io
+import tensorflow as tf
 from scipy.stats import linregress
 from matplotlib import pyplot as plt
-from skimage import io
 from .. import GlobalVariables as gv
 from ..PreProcess.readinfo import getInfo
 from ..ProgressBar import progress
@@ -123,9 +123,11 @@ def tuningParameters( batch_num = 10000,
                             par_evaluation = current_row
                         else:
                             np.append(par_evaluation, current_row, axis = 0)
+                        PROGRESS.setCurrentIteration(iteration)
+                        PROGRESS.printProgress()
+                        par_evaluation.tofile(gv.__DIR__ + gv.dp__tuningPar_dir
+                            + hv.dp__tuningPar_filename, sep = ' ')
 
-    par_evaluation.tofile(gv.__DIR__ + gv.dp__tuningPar_dir +
-                          hv.dp__tuningPar_filename, sep = ' ')
 
 def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
         batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM'):
@@ -156,7 +158,8 @@ def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
                         
 def main():
     try:      
-        if len(sys.argv) <= 1:
+        if len(sys.argv) > 1:
+            print('Runing ')
             run(ins_size = 100,
                 stride = 10,
                 label_option = 100,
@@ -165,12 +168,13 @@ def main():
                 learning_rate = 0.01,
                 label_mode = 'NUM')
         else:
+            print ('Parameter Tuning')
             tuningParameters(batch_num = 10000,
                       batch_size = 2000,
                       learning_rate = [0.001, 0.005, 0.01, 0.05],
-                      ins_size = [10, 20, 50, 100, 150],
+                      ins_size = [150, 20, 50, 100, 150],
                       stride = [5],
-                      label_option = [10, 100, 1000],
+                      label_option = [1000, 100, 1000],
                       label_mode =['PRO', 'NUM'] )
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"

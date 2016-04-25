@@ -121,6 +121,11 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
         xlen = len(X)
 
         image_show = np.zeros((ylen, xlen))
+        
+        if(i <= 1):
+            print ('memory cost for one image is '+
+                   str(instanceSize**2*c*xlen*ylen*4) +
+                   ' bytes')
 
         instances = np.zeros((instanceSize ** 2 * c, xlen * ylen ))
         labels = np.zeros((numOfClasses, xlen * ylen))
