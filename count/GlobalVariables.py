@@ -33,3 +33,6 @@ cu__result_filename = 'curvatureResult.txt'
 
 #show progress bar
 show_progress = True
+
+#training logs
+log_write = True

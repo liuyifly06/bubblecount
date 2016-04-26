@@ -31,8 +31,12 @@ def train(batchNum = 500, batchSize = 200000, learningRate = 0.001,
         batch_size = batchSize,
         steps = batchNum,
         learning_rate = learningRate)
-    classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1),
+
+    if(gv.log_write):
+        classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1),
                    logdir = gv.__DIR__ + gv.tensorflow_log_dir)
+    else:
+        classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1))
     return classifier
 
 def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
