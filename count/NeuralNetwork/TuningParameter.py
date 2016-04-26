@@ -50,20 +50,20 @@ def tuningParameters( MaxProcessNum = 8,
     f = open(gv.__DIR__ + gv.dp__tuningPar_dir 
              + gv.dp__tuningPar_filename, "w")
     for info_line, eval_res in zip(info, evaluation):
-        f.write(info_line + ' => ' + np.array_str(eval_res) + '\n')  
+        f.write(info_line + ' ' + np.array_str(eval_res) + '\n')  
     f.close()
     return [info, evaluation]
 
                         
 def main():
     try:      
-        tuningParameters( MaxProcessNum = -1,
-                          batch_num = [1],
-                          batch_size = [200],
-                          learning_rate = [0.001],
-                          ins_size = [20, 20],
-                          stride = [20],
-                          label_option = [10],
+        tuningParameters( MaxProcessNum = 20,
+                          batch_num = [10000],
+                          batch_size = [2000],
+                          learning_rate = [0.001, 0.005, 0.01, 0.05],
+                          ins_size = [150, 100, 50, 20],
+                          stride = [10, 20],
+                          label_option = [100],
                           label_mode =['PRO', 'NUM'] )
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"
