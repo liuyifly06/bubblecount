@@ -18,6 +18,8 @@ def tuningParameters( MaxProcessNum = 8,
                       label_option = [10, 100, 1000],
                       label_mode =['PRO', 'NUM'] ):
     
+    gv.dp_test_save_data = False
+    gv.dp_image_save = False
     gv.log_write = False
     gv.show_progress = False
     # get all possible parameters

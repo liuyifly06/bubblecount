@@ -62,7 +62,8 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
         index = index + 1
         result[index] = np.sum(y)      
         # saving labeled result as image
-        io.imsave(gv.__DIR__ + gv.dp__image_dir + image_file,
+        if(gv.dp_image_save):
+            io.imsave(gv.__DIR__ + gv.dp__image_dir + image_file,
                   np.reshape(y, (testDS.ylength, testDS.xlength)))
         _y = np.argmax(testDS.labels, axis = 1)
         # total accuracy
@@ -80,8 +81,9 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
         PROGRESS.setCurrentIteration(i+1)
         PROGRESS.setInfo(suffix_info = image_file)
         PROGRESS.printProgress()
-    accuracy.tofile(accuracy_filename, sep = " ")
-    result.tofile(result_filename, sep = " ")
+    if(gv.dp_test_save_data):
+        accuracy.tofile(accuracy_filename, sep = " ")
+        result.tofile(result_filename, sep = " ")
     return [result, accuracy]
 
 def tuningParameters( batch_num = 10000,
@@ -125,7 +127,7 @@ def tuningParameters( batch_num = 10000,
                             + gv.dp__tuningPar_filename, sep = ' ')
 
 
-def test(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
+def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
         batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM',
         run_mode = 'NO'):
     
@@ -193,7 +195,7 @@ def main():
     try:      
         if len(sys.argv) > 1:
             print('Runing ')
-            test(ins_size = 50,
+            test_run(ins_size = 50,
                 stride = 10,
                 label_option = 100,
                 batch_num = 1000,
