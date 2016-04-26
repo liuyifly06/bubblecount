@@ -2,8 +2,8 @@
 # Skflow use google machine learning tool TensorFlow
 
 ## for server##
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 ###############
 
 import sys, traceback, time, skflow
@@ -101,37 +101,17 @@ def tuningParameters( batch_num = 10000,
                     for lm in label_mode:
                         info = ('ins:'+str(ins)+' s:'+str(s)+' classes:'+str(lo)
                             +' LR:' +str(lr)+' mode:'+lm)
-                        PROGRESS.setInfo(suffix_info = info)
-                        PROGRESS.setCurrentIteration(iteration)
-                        PROGRESS.printProgress()
+                        
                         iteration = iteration + 1
-                        classifier = train(
-                               batchNum = batch_num,
-                               batchSize = batch_size,
-                               learningRate = lr,
-                               ImagePatchWidth=ins,
-                               ImagePatchStep = s,
-                               labelOptionNum = lo,
-                               labelMode = lm)           
-                        result, accuracy = test(classifier, ins, s, lo)
-                        slope, intercept, r_value, p_value, std_err = (
-                            linregress(bubble_num, result.T))
-                        directory = gv.__DIR__ + gv.dp__tuningPar_dir 
-                        if not os.path.exists(directory):
-                            os.makedirs(directory)
-                        result.tofile(directory + 
-                            str(ins) + '_' + str(s) + '_' + str(lo) + '_' +
-                            str(lr) + '_' + str(lm) + '.dat', sep = ' ')
-                        acc_mean = np.mean(accuracy, axis = 0)
-                        acc_std  = np.std (accuracy, axis = 0)
-                        current_row = np.array([ins, s, lo, lr, lm,
-                            acc_mean[0], acc_mean[1], acc_mean[2], acc_mean[3],
-                            acc_std[0], acc_std[1], acc_std[2], acc_std[3],
-                            slope, intercept, r_value, p_value, std_err])
+                        current_row = performance(ins, s, lo, batch_num,
+                                                  batch_size, lr, lm)
+
                         if(par_evaluation.size == 0):
                             par_evaluation = current_row
                         else:
                             np.append(par_evaluation, current_row, axis = 0)
+
+                        PROGRESS.setInfo(suffix_info = info)
                         PROGRESS.setCurrentIteration(iteration)
                         PROGRESS.printProgress()
                         directory = gv.__DIR__ + gv.dp__tuningPar_dir
@@ -141,7 +121,7 @@ def tuningParameters( batch_num = 10000,
                             + gv.dp__tuningPar_filename, sep = ' ')
 
 
-def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
+def test(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
         batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM',
         run_mode = 'NO'):
     
@@ -160,7 +140,7 @@ def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
     accuracy = np.loadtxt(gv.dp__accuracy_filename)
     accuracy = np.reshape(accuracy, (len(accuracy)/4,4))
     slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
-                                                             result))
+                                                         result))    
     fig, ax = plt.subplots(1,2)
     ax[0].scatter(bubble_num, result)
     ax[0].plot([min(bubble_num), max(bubble_num)],
@@ -168,12 +148,48 @@ def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
                 max(bubble_num)*slope + intercept], c = 'r')
     ax[1].plot(accuracy)
     plt.show()
-                        
+
+def performance(ins_size = 100, stride = 10, label_option = 100,
+                batch_num = 10000, batch_size = 2000, learning_rate = 0.01,
+                label_mode = 'NUM'):
+    image_files, bubble_num, bubble_regions = getInfo()
+    classifier = train(batchNum = batch_num,
+                       batchSize = batch_size,
+                       learningRate = learning_rate,
+                       ImagePatchWidth=ins_size,
+                       ImagePatchStep = stride,
+                       labelOptionNum = label_option,
+                       labelMode = label_mode)
+    result, accuracy = test(classifier, ins_size, stride, label_option)
+    slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
+                                                         result))
+
+    accuracy_mean = np.mean(accuracy, axis = 0)
+    accuracy_std  = np.std (accuracy, axis = 0)
+    status        = np.append(np.array([slope, intercept, r_value, 
+                                        p_value, std_err]),
+                              np.append(accuracy_mean, accuracy_std))
+
+    # save result
+    directory = gv.__DIR__ + gv.dp__tuningPar_dir
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    result.tofile(directory + 'patch_' + str(ins_size) + '_' + str(stride)
+                  + '_label_' + str(label_option) + '_' + str(label_mode)
+                  + '_training_' + str(learning_rate) + '_' + str(batch_num)
+                  + '_' + str(batch_size) + '_result.dat')
+    accuracy.tofile(directory + 'patch_' + str(ins_size) + '_' + str(stride)
+                  + '_label_' + str(label_option) + '_' + str(label_mode)
+                  + '_training_' + str(learning_rate) + '_' + str(batch_num)
+                  + '_' + str(batch_size) + '_accuracy.dat')
+    
+    return status 
+                  
 def main():
     try:      
         if len(sys.argv) > 1:
             print('Runing ')
-            run(ins_size = 50,
+            test(ins_size = 50,
                 stride = 10,
                 label_option = 100,
                 batch_num = 1000,

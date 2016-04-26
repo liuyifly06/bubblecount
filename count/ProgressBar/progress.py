@@ -1,4 +1,5 @@
 import sys, traceback, time
+from .. import GlobalVariables as gv
 
 class progress(object):
     iteration = 0
@@ -39,6 +40,7 @@ class progress(object):
         self.startTime = start_time
 
     def printProgress(self):
+      if(gv.show_progress):
         filledLength    = int(round(self.barLength * self.iteration / 
                               float(self.total)))
         percents        = round(100.00 * (self.iteration / float(self.total)),

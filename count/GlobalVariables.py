@@ -1,6 +1,5 @@
 import os
 
-
 #dirctory of python package
 __DIR__ = os.path.dirname(os.path.realpath(__file__)) + '/..'
 
@@ -31,3 +30,6 @@ cnn__accuracy_filename = 'convolutionalNNAccuracy.txt'
 #curvature
 cu__image_dir = '/images/curvature/'
 cu__result_filename = 'curvatureResult.txt'
+
+#show progress bar
+show_progress = True
