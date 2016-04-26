@@ -125,7 +125,7 @@ def tuningParameters( batch_num = 10000,
                             + gv.dp__tuningPar_filename, sep = ' ')
 
 
-def test(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
+def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
         batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM',
         run_mode = 'NO'):
     
@@ -193,7 +193,7 @@ def main():
     try:      
         if len(sys.argv) > 1:
             print('Runing ')
-            test(ins_size = 50,
+            test_run(ins_size = 50,
                 stride = 10,
                 label_option = 100,
                 batch_num = 1000,
