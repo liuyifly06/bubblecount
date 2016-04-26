@@ -146,7 +146,7 @@ def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
     accuracy = np.loadtxt(gv.dp__accuracy_filename)
     accuracy = np.reshape(accuracy, (len(accuracy)/4,4))
     slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
-                                                         result))    
+                                                         result.T))    
     fig, ax = plt.subplots(1,2)
     ax[0].scatter(bubble_num, result)
     ax[0].plot([min(bubble_num), max(bubble_num)],
@@ -167,8 +167,8 @@ def performance(ins_size = 100, stride = 10, label_option = 100,
                        labelOptionNum = label_option,
                        labelMode = label_mode)
     result, accuracy = test(classifier, ins_size, stride, label_option)
-    slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
-                                                         result))
+    slope, intercept, r_value, p_value, std_err = linregress(bubble_num,
+                                                         result.T)
 
     accuracy_mean = np.mean(accuracy, axis = 0)
     accuracy_std  = np.std (accuracy, axis = 0)
@@ -195,14 +195,14 @@ def main():
     try:      
         if len(sys.argv) > 1:
             print('Runing ')
-            test_run(ins_size = 50,
-                stride = 10,
+            performance(ins_size = 20,
+                stride = 20,
                 label_option = 100,
-                batch_num = 1000,
-                batch_size = 2000,
+                batch_num = 1,
+                batch_size = 200,
                 learning_rate = 0.01,
-                label_mode = 'PRO',
-                run_mode = sys.argv[1])
+                label_mode = 'PRO') #,
+                #run_mode = sys.argv[1])
         else:
             print ('Parameter Tuning')
             tuningParameters(batch_num = 10000,
