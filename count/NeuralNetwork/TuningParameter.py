@@ -46,9 +46,12 @@ def tuningParameters( MaxProcessNum = 8,
     else:
         pool = multiprocessing.Pool(processes = MaxProcessNum)
     evaluation = pool.map(multi_run_wrapper, pars)
-    evaluation.tofile(gv.__DIR__ + gv.dp__tuningPar_dir
-                      + gv.dp__tuningPar_filename, sep = ' ')
-    
+    print [len(info), len(evaluation)]
+    f = open(gv.__DIR__ + gv.dp__tuningPar_dir 
+             + gv.dp__tuningPar_filename, "w")
+    for info_line, eval_res in zip(info, evaluation):
+        f.write(info_line + ' => ' + np.array_str(eval_res) + '\n')  
+    f.close()
     return [info, evaluation]
 
                         
@@ -57,10 +60,10 @@ def main():
         tuningParameters( MaxProcessNum = -1,
                           batch_num = [1],
                           batch_size = [200],
-                          learning_rate = [0.001, 0.005, 0.01, 0.05],
-                          ins_size = [20, 20, 20, 20, 20],
+                          learning_rate = [0.001],
+                          ins_size = [20, 20],
                           stride = [20],
-                          label_option = [10, 100],
+                          label_option = [10],
                           label_mode =['PRO', 'NUM'] )
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"
