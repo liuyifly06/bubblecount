@@ -1,6 +1,11 @@
 # Deeplearning neural network with  skflow
 # Skflow use google machine learning tool TensorFlow
 
+## for server##
+import matplotlib
+matplotlib.use('Agg')
+###############
+
 import sys, traceback, time, skflow
 import os.path
 import numpy as np
@@ -108,32 +113,40 @@ def tuningParameters( batch_num = 10000,
                                ImagePatchStep = s,
                                labelOptionNum = lo,
                                labelMode = lm)           
-                        result, accuracy = test(classifier,ins, s, lo)
+                        result, accuracy = test(classifier, ins, s, lo)
                         slope, intercept, r_value, p_value, std_err = (
-                            linregress(bubble_num, result))
-                        result.tofile(gv.__DIR__ + gv.dp__tuningPar_dir +
+                            linregress(bubble_num, result.T))
+                        directory = gv.__DIR__ + gv.dp__tuningPar_dir 
+                        if not os.path.exists(directory):
+                            os.makedirs(directory)
+                        result.tofile(directory + 
                             str(ins) + '_' + str(s) + '_' + str(lo) + '_' +
-                            str(lr) + '_' + str(lm) + '.dat')
+                            str(lr) + '_' + str(lm) + '.dat', sep = ' ')
+                        acc_mean = np.mean(accuracy, axis = 0)
+                        acc_std  = np.std (accuracy, axis = 0)
                         current_row = np.array([ins, s, lo, lr, lm,
-                                            np.mean(accuracy, axis=0),
-                                            np.std(accuracy, axis=0),
-                                            slope, intercept, r_value,
-                                            p_value, std_err])
+                            acc_mean[0], acc_mean[1], acc_mean[2], acc_mean[3],
+                            acc_std[0], acc_std[1], acc_std[2], acc_std[3],
+                            slope, intercept, r_value, p_value, std_err])
                         if(par_evaluation.size == 0):
                             par_evaluation = current_row
                         else:
                             np.append(par_evaluation, current_row, axis = 0)
                         PROGRESS.setCurrentIteration(iteration)
                         PROGRESS.printProgress()
-                        par_evaluation.tofile(gv.__DIR__ + gv.dp__tuningPar_dir
-                            + hv.dp__tuningPar_filename, sep = ' ')
+                        directory = gv.__DIR__ + gv.dp__tuningPar_dir
+                        if not os.path.exists(directory):
+                            os.makedirs(directory)
+                        par_evaluation.tofile(directory
+                            + gv.dp__tuningPar_filename, sep = ' ')
 
 
 def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
-        batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM'):
+        batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM',
+        run_mode = 'NO'):
     
     image_files, bubble_num, bubble_regions = getInfo()
-    if not os.path.isfile(gv.dp__result_filename):
+    if (not os.path.isfile(gv.dp__result_filename)) or (run_mode == 'YES'):
         #training data
         classifier = train(batchNum = batch_num,
                            batchSize = batch_size,
@@ -146,8 +159,8 @@ def run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
     result = np.loadtxt(gv.dp__result_filename)
     accuracy = np.loadtxt(gv.dp__accuracy_filename)
     accuracy = np.reshape(accuracy, (len(accuracy)/4,4))
-    slope, intercept, r_value, p_value, std_err = linregress(bubble_num,
-                                                             result)
+    slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
+                                                             result))
     fig, ax = plt.subplots(1,2)
     ax[0].scatter(bubble_num, result)
     ax[0].plot([min(bubble_num), max(bubble_num)],
@@ -160,21 +173,22 @@ def main():
     try:      
         if len(sys.argv) > 1:
             print('Runing ')
-            run(ins_size = 100,
+            run(ins_size = 50,
                 stride = 10,
                 label_option = 100,
-                batch_num = 10000,
+                batch_num = 1000,
                 batch_size = 2000,
                 learning_rate = 0.01,
-                label_mode = 'NUM')
+                label_mode = 'PRO',
+                run_mode = sys.argv[1])
         else:
             print ('Parameter Tuning')
             tuningParameters(batch_num = 10000,
                       batch_size = 2000,
-                      learning_rate = [0.001, 0.005, 0.01, 0.05],
-                      ins_size = [150, 20, 50, 100, 150],
-                      stride = [5],
-                      label_option = [1000, 100, 1000],
+                      learning_rate = [0.001, 0.01, 0.05],
+                      ins_size = [20, 50, 100, 200],
+                      stride = [10, 20],
+                      label_option = [100, 1000],
                       label_mode =['PRO', 'NUM'] )
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"

@@ -146,7 +146,8 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
                 boundaryR = currentX + np.floor(instanceSize/2)
 
                 ind = ind + 1
-                temp = imageData[boundaryT:boundaryD, boundaryL:boundaryR, :]
+                temp = (imageData[int(boundaryT):int(boundaryD),
+                                  int(boundaryL):int(boundaryR), :])
                 instances[:, ind] = np.reshape(temp,(instanceSize**2*c, 1)).T
                 
                 assert (mode == 'NUM' or mode == 'PRO')
@@ -155,7 +156,7 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
                     positiveLabels, scale = 0.3) * (numOfClasses/2 + 2)
                     probabiliyIndex = min(numOfClasses-1, probabiliyIndex)
                     image_show[iy, ix] = int(probabiliyIndex)               
-                    labels[probabiliyIndex, ind] = 1
+                    labels[int(probabiliyIndex), ind] = 1
                 elif(mode == 'NUM'):
                     box = [boundaryT, boundaryD, boundaryL, boundaryR]
                     bubbleNums = numberOfBubbles(box, positiveLabels)
