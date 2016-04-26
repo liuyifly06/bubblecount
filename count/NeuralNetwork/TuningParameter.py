@@ -1,7 +1,6 @@
 import sys, traceback, multiprocessing
 import numpy as np
 from scipy.stats import linregress
-from matplotlib import pyplot as plt
 from .. import GlobalVariables as gv
 from ..PreProcess.readinfo import getInfo
 from ..ProgressBar import progress
