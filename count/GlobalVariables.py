@@ -16,7 +16,9 @@ pp__result_dir = __TrainImageDir__
 
 #NeuralNetwork
 tensorflow_log_dir = '/result/logs/'
-#deeplearning 
+#deeplearning
+dp_test_save_data = True
+dp_image_save = True
 dp__image_dir = '/images/deepLearning/'
 dp__result_filename = 'deepLearningResult.txt'
 dp__accuracy_filename = 'deepLearningAccuracy.txt'
