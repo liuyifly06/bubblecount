@@ -53,14 +53,14 @@ def tuningParameters( MaxProcessNum = 8,
                         
 def main():
     try:      
-        tuningParameters( MaxProcessNum = 8,
-                          batch_num = [10000],
-                          batch_size = [2000],
+        tuningParameters( MaxProcessNum = -1,
+                          batch_num = [1],
+                          batch_size = [200],
                           learning_rate = [0.001, 0.005, 0.01, 0.05],
-                          ins_size = [10, 20, 50, 100, 150],
-                          stride = [5],
-                          label_option = [10, 100, 1000],
-                          label_mode =['PRO', 'NUM'] ):
+                          ins_size = [20, 20, 20, 20, 20],
+                          stride = [20],
+                          label_option = [10, 100],
+                          label_mode =['PRO', 'NUM'] )
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"
     except Exception:
