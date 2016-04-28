@@ -51,7 +51,8 @@ def tuningParameters( MaxProcessNum = 8,
     f = open(gv.__DIR__ + gv.dp__tuningPar_dir 
              + gv.dp__tuningPar_filename, "w")
     for info_line, eval_res in zip(info, evaluation):
-        f.write(info_line + ' ' + np.array_str(eval_res) + '\n')  
+        f.write(info_line + ' ' + 
+            np.array_str(np.reshape(eval_res,(eval_res.size, 1))) + '\n')  
     f.close()
     return [info, evaluation]
 

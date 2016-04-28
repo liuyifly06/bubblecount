@@ -43,6 +43,10 @@ def distribution(binwidth = 5):
 
 def main():
     try:
+        image_files, bubble_num, bubble_regions = getInfo()
+        f = open('manaul_count.dat','w')
+        bubble_num.tofile(f, sep = ' ')
+        f.close()
         distribution()
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"
