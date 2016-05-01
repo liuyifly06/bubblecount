@@ -5,7 +5,6 @@ while ischar(tline)
     if (tline(1:5) == 'batch')
         fprintf(fidout,'\n');
     end
-    disp(tline);
     tline = tline(1:end-1);
     fprintf(fidout,'%s',tline);
     fprintf(fidout,'%s',' ');
