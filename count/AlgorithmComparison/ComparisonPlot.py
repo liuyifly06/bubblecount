@@ -6,7 +6,8 @@ from skimage import io
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.odr import ODR, Model, Data, RealData
-
+from .. import GlobalVariables as gv
+from scipy.stats import linregress
 def linear_fit_function(x, k, b):
     return k*x + b
 
@@ -14,7 +15,7 @@ def ord_function(beta,x):
     return beta[0]*x + beta[1]
 
 def manual_count():
-    filename = '../../images/AfterPreprocessing/positiveInstances.dat'
+    filename = gv.__DIR__ + gv.pp__image_dir+'positiveInstances.dat'
     f_read = open(filename, 'r')
     index = 0
     data = []
@@ -35,14 +36,21 @@ def main():
     try:
         manual_number = manual_count()
         xvalue = xaxis(manual_number)
-        legend = ['curvature', 'neural-network', 'hough transform', 'SVM']
-	data_filename = ['number.txt', 'skflow.txt', 'curvature.txt', 'data.txt']
+        legend = ['curvature',
+                  'neural-network',
+                  'hough transform',
+                  'SVM']
+	data_filename = ['number.txt',
+                         'skflow.txt',
+                         'curvature.txt',
+                         'data.txt']
         colors = ['blue', 'red', 'black', 'green']
 
         annotation_text = "function:  y = kx + b";
         fig, ax = plt.subplots(ncols = 1)
         for i in range(len(data_filename)):
-            temp = np.loadtxt(data_filename[i],skiprows=0)
+            temp = np.loadtxt(gv.__DIR__ + gv.ac__file_dir  + data_filename[i],
+                              skiprows=0)
             data = np.reshape(temp,(41,len(temp)/41))
             #print data
             data[:,1:3] = np.true_divide(data[:,1:3], np.amax(data[:,1]))
@@ -73,15 +81,19 @@ def main():
             ax.errorbar(data[:,0], data[:,1], xerr = xerr,\
                         yerr = yerr, fmt='o',color=colors[i])
             ### not using error bar in fitting #########
-            popt[0],popt[1] = np.polyfit(xvalue[:,0], data[:,1], 1)
+            slope, intercept, r_value, p_value, std_err = (
+                   linregress(xvalue[:,0], data[:,1]))
+              
+            #popt[0],popt[1] = np.polyfit(xvalue[:,0], data[:,1], 1)
             ###
-            ax.plot(data[:,0], popt[0]*data[:,0]+popt[1], colors[i], linewidth = 2)
+            ax.plot(data[:,0], slope*data[:,0]+intercept,
+                    colors[i], linewidth = 2)
             annotation_text = annotation_text + "\n" +\
                               legend[i] + "(" + \
                               colors[i] + ") \n" + \
                               "k = %.2f b = %.2f Error = %.2f"%( \
                               popt[0], popt[1], fitting_error) 
-       
+            print[slope, intercept, r_value, p_value, std_err], data_filename[i]
         bbox_props = dict(boxstyle="square,pad=0.3", fc="white", ec="black", lw=2)
 	#ax.text(0, 4.15, annotation_text, ha="left", va="top", \
         #        rotation=0, size=14, bbox=bbox_props)

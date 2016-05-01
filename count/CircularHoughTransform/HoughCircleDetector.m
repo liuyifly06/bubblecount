@@ -9,7 +9,7 @@ function NumberOfCircles = HoughCircleDetector(img, plot_show)
 
 if (plot_show==1)
     % plot the recognized circles
-    figure(2); subplot(1,3,3);h=imagesc(img'); colormap('gray'); axis image;
+    figure(2); subplot(1,3,3); h=imagesc(img'); colormap('gray'); axis image;
     hold on; plot(centers(:,2), centers(:,1), 'r+');
     for k = 1 : size(centers, 1),
         DrawCircle(centers(k,2), centers(k,1), radii(k), 32, 'r-');

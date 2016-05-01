@@ -10,6 +10,9 @@ __TrainImage__ = [ \
 ]
 __TrainImageDir__ = '/images/AfterPreprocessing/'
 
+#Algorithm Comparison
+ac__file_dir = '/count/AlgorithmComparison/'
+
 #preprocessing
 pp__image_dir = '/images/original/'
 pp__result_dir = __TrainImageDir__
