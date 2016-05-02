@@ -53,6 +53,8 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
     start_time = time.time()
 
     PROGRESS = progress.progress(0, len(image_files), prefix_info = 'Labeling ')
+    
+    labeled_number = np.zeros((len(image_files),1))
 
     for i, image_file in enumerate(image_files):
         testDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep,
@@ -66,6 +68,7 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
             io.imsave(gv.__DIR__ + gv.dp__image_dir + image_file,
                   np.reshape(y, (testDS.ylength, testDS.xlength)))
         _y = np.argmax(testDS.labels, axis = 1)
+        labeled_number[index] = np.sum(_y)
         # total accuracy
         accuracy[index, 0] = np.true_divide(np.sum(y == _y), _y.size)
         # accuracy of negative labeled instances
@@ -84,6 +87,7 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
     if(gv.dp_test_save_data):
         accuracy.tofile(accuracy_filename, sep = " ")
         result.tofile(result_filename, sep = " ")
+        labeled_number.tofile('labeled_number.dat', sep = " ")
     return [result, accuracy]
 
 def tuningParameters( batch_num = 10000,
@@ -195,14 +199,14 @@ def main():
     try:      
         if len(sys.argv) > 1:
             print('Runing ')
-            performance(ins_size = 20,
-                stride = 20,
+            test_run(ins_size = 40,
+                stride = 7,
                 label_option = 100,
-                batch_num = 1,
-                batch_size = 200,
-                learning_rate = 0.01,
-                label_mode = 'PRO') #,
-                #run_mode = sys.argv[1])
+                batch_num = 10000,
+                batch_size = 2000,
+                learning_rate = 0.14,
+                label_mode = 'PRO',
+                run_mode = sys.argv[1])
         else:
             print ('Parameter Tuning')
             tuningParameters(batch_num = 10000,
