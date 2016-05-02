@@ -42,7 +42,7 @@ def main():
                   'SVM']
 	data_filename = ['number.txt',
                          'nn.txt',#'skflow.txt',
-                         'c_2.txt',#'curvature.txt',
+                         'curvature.txt',#'c_2.txt',
                          'data.txt']
         colors = ['blue', 'red', 'black', 'green']
 
