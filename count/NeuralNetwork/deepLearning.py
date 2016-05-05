@@ -19,7 +19,7 @@ from ..PreProcess.readinfo import getInfo
 from ..ProgressBar import progress
 
 def train(batchNum = 500, batchSize = 200000, learningRate = 0.001,
-          layers = [500, 1000, 500], ImagePatchWidth = 20,
+          layers = [5000, 10000, 5000], ImagePatchWidth = 20,
           ImagePatchStep = 4, labelOptionNum = 100,
           labelMode = 'PRO'):
     trainDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep,
