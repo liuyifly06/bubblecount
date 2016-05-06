@@ -1,8 +1,0 @@
-setup.py
-BubbleCount.egg-info/PKG-INFO
-BubbleCount.egg-info/SOURCES.txt
-BubbleCount.egg-info/dependency_links.txt
-BubbleCount.egg-info/requires.txt
-BubbleCount.egg-info/top_level.txt
-bubblecount/__init__.py
-bubblecount/globalvar.py
