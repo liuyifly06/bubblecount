@@ -76,7 +76,7 @@ def labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
         for val in par:
             fid.write('%d ' % val)
         fid.write('%f\n' % res[0][2])
-        r_squared.append(par + res[0][2])
+        r_squared.append(par + [res[0][2]])
     fid.close()
     #restore showing process bar status
     gv.show_progress = True
@@ -98,7 +98,7 @@ def main():
         labelModes = ['PRO']
         """
         labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
-                              MaxProcessNum = 2)
+                              MaxProcessNum = -1)
         
     except KeyboardInterrupt:
         print "Shutdown requested... exiting"
