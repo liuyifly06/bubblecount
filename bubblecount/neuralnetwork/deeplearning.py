@@ -9,14 +9,14 @@
 import sys, traceback, time, skflow
 import os.path
 import numpy as np
-import dataSet as ds
+import dataset as ds
 import tensorflow as tf
 from skimage import io
 from scipy.stats import linregress
 from matplotlib import pyplot as plt
-from .. import GlobalVariables as gv
-from ..PreProcess.readinfo import getInfo
-from ..ProgressBar import progress
+from bubblecount import globalvar as gv
+from bubblecount.preprocess.readinfo import getinfo
+from bubblecount.progressbar import progress
 
 def train(batchNum = 500, batchSize = 200000, learningRate = 0.001,
           layers = [5000, 10000, 5000], ImagePatchWidth = 20,
@@ -41,13 +41,15 @@ def train(batchNum = 500, batchSize = 200000, learningRate = 0.001,
 
 def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
          labelOptionNum = 100, labelMode = 'PRO'):
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
 
     result_filename   = gv.dp__result_filename
     accuracy_filename = gv.dp__accuracy_filename
     
     result   = np.zeros((len(image_files),1))
-    accuracy = np.zeros((len(image_files),4))
+    correct  = np.zeros(4)
+    accuracy = np.zeros(4)
+    totalnum_instances = 0
 
     index = -1
     start_time = time.time()
@@ -69,21 +71,18 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
                   np.reshape(y, (testDS.ylength, testDS.xlength)))
         _y = np.argmax(testDS.labels, axis = 1)
         labeled_number[index] = np.sum(_y)
-        # total accuracy
-        accuracy[index, 0] = np.true_divide(np.sum(y == _y), _y.size)
-        # accuracy of negative labeled instances
-        accuracy[index, 1] = np.true_divide(np.sum(np.all(
-            [y == _y, _y == 0], axis = 0)), np.sum(_y == 0))
-        # accuracy of positive labeled instances
-        accuracy[index, 2] = np.true_divide(np.sum(np.all(
-            [y == _y, _y >  0], axis = 0)), np.sum(_y >  0))
-        # average difference sum
-        accuracy[index, 3] = np.true_divide(
-            np.sum(np.absolute(np.subtract(y, _y))), _y.size)
-
+        current_correct =  np.array([np.sum(y == _y),
+                           np.sum(np.all([y == _y, _y == 0], axis = 0)),
+                           np.sum(np.all([y == _y, _y >  0], axis = 0)),
+                           np.sum(np.absolute(np.subtract(y, _y)))])
+        correct = np.add(correct, current_correct)
+        totalnum_instances =  _y.size + totalnum_instances
+      
         PROGRESS.setCurrentIteration(i+1)
         PROGRESS.setInfo(suffix_info = image_file)
         PROGRESS.printProgress()
+    
+    accuracy = np.true_divide(correct, totalnum_instances)
     if(gv.dp_test_save_data):
         accuracy.tofile(accuracy_filename, sep = " ")
         result.tofile(result_filename, sep = " ")
@@ -97,7 +96,7 @@ def tuningParameters( batch_num = 10000,
                       stride = [5],
                       label_option = [10, 100, 1000],
                       label_mode =['PRO', 'NUM'] ):
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
     par_evaluation = np.array([])
     total = (len(learning_rate) * len(ins_size) * len(stride) *
              len(label_option) * len(label_mode))
@@ -135,7 +134,7 @@ def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
         batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM',
         run_mode = 'NO'):
     
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
     if (not os.path.isfile(gv.dp__result_filename)) or (run_mode == 'YES'):
         #training data
         classifier = train(batchNum = batch_num,
@@ -162,7 +161,7 @@ def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
 def performance(ins_size = 100, stride = 10, label_option = 100,
                 batch_num = 10000, batch_size = 2000, learning_rate = 0.01,
                 label_mode = 'NUM'):
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
     classifier = train(batchNum = batch_num,
                        batchSize = batch_size,
                        learningRate = learning_rate,
@@ -174,11 +173,8 @@ def performance(ins_size = 100, stride = 10, label_option = 100,
     slope, intercept, r_value, p_value, std_err = linregress(bubble_num,
                                                          result.T)
 
-    accuracy_mean = np.mean(accuracy, axis = 0)
-    accuracy_std  = np.std (accuracy, axis = 0)
     status        = np.append(np.array([slope, intercept, r_value, 
-                                        p_value, std_err]),
-                              np.append(accuracy_mean, accuracy_std))
+                                        p_value, std_err]), accuracy)
 
     # save result
     directory = gv.__DIR__ + gv.dp__tuningPar_dir
@@ -187,12 +183,7 @@ def performance(ins_size = 100, stride = 10, label_option = 100,
     result.tofile(directory + 'patch_' + str(ins_size) + '_' + str(stride)
                   + '_label_' + str(label_option) + '_' + str(label_mode)
                   + '_training_' + str(learning_rate) + '_' + str(batch_num)
-                  + '_' + str(batch_size) + '_result.dat')
-    accuracy.tofile(directory + 'patch_' + str(ins_size) + '_' + str(stride)
-                  + '_label_' + str(label_option) + '_' + str(label_mode)
-                  + '_training_' + str(learning_rate) + '_' + str(batch_num)
-                  + '_' + str(batch_size) + '_accuracy.dat')
-    
+                  + '_' + str(batch_size) + '_result.dat')    
     return status 
                   
 def main():

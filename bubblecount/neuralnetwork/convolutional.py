@@ -5,8 +5,8 @@ import tensorflow as tf
 import dataSet as ds
 from matplotlib import pyplot as plt
 from skimage import io
-from .. import GlobalVariables as gv
-from ..PreProcess.readinfo import getInfo
+from .. import globalvar as gv
+from ..preprocess.readinfo import getinfo
 
 def train(batchNum = 500, batchSize = 200000, learningRate = 0.001,
           ImagePatchWidth = 20, #layers = [500, 1000, 500],
@@ -55,7 +55,7 @@ def conv_model(image, y):
 
 def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
          labelOptionNum = 100, labelMode = 'PRO'):
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
 
     result_filename   = gv.cnn__result_filename
     accuracy_filename = gv.cnn__accuracy_filename
@@ -99,7 +99,7 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
     
 def main():
     try:      
-        image_files, bubble_num, bubble_regions = getInfo()
+        image_files, bubble_num, bubble_regions = getinfo()
         if not os.path.isfile(gv.cnn__result_filename):
             ins_size = 100
             stride = 10

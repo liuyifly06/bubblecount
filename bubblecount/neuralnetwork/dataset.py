@@ -4,9 +4,9 @@ import sys, traceback, time, warnings
 import numpy as np
 from matplotlib import pyplot as plt
 from skimage import io
-from ..PreProcess.readinfo import getInfo
-from .. import GlobalVariables as gv
-from ..ProgressBar import progress
+from bubblecount.preprocess.readinfo import getinfo
+import bubblecount.globalvar as gv
+from bubblecount.progressbar import progress
 
 class DataSet(object):
     def __init__(self, images, labels, xlength, ylength, dtype=tf.float32):
@@ -98,7 +98,7 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
     xlen = 0
     ylen = 0
 
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
 
     for i, imageFilename in enumerate(filenameList):
         print ('Generating instances from [' + imageFilename + 
@@ -121,12 +121,12 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
         xlen = len(X)
 
         image_show = np.zeros((ylen, xlen))
-        
+        """
         if(i <= 1):
             print ('memory cost for one image is '+
                    str(instanceSize**2*c*xlen*ylen*4) +
                    ' bytes')
-
+        """
         instances = np.zeros((instanceSize ** 2 * c, xlen * ylen ))
         labels = np.zeros((numOfClasses, xlen * ylen))
 
@@ -238,12 +238,6 @@ def numberOfBubbles(box, positiveLabels):
     
     bubbleIncludes = np.true_divide(np.multiply(Xedge, Yedge), area[index])   
     return np.sum(bubbleIncludes)
-
-def intervalOverlap(interval1, interval2):
-    if(np.any([interval1[0] >= interval2[1], interval1[1] <= interval2[0]])):
-        return 0
-    else:
-        return min(interval1[1], interval2[1]) - max(interval1[0], interval2[0])
 
 def main():
      try:

@@ -10,8 +10,8 @@ __TrainImage__ = [ \
 ]
 __TrainImageDir__ = '/images/AfterPreprocessing/'
 
-#Algorithm Comparison
-ac__file_dir = '/count/AlgorithmComparison/'
+#benchmark
+ac__file_dir = '/bubblecount/benchmark/'
 
 #preprocessing
 pp__image_dir = '/images/original/'
@@ -41,3 +41,7 @@ show_progress = True
 
 #training logs
 log_write = True
+
+#test
+label_linearity_file_dir = '/result/benchmark/'
+label_linearity_file = 'labellinearity.dat'

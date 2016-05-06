@@ -1,5 +1,5 @@
 import sys, traceback, time
-from .. import GlobalVariables as gv
+import bubblecount.globalvar as gv
 
 class progress(object):
     iteration = 0

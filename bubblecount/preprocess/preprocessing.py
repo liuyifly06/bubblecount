@@ -1,5 +1,6 @@
 import sys, traceback, time
 import numpy as np
+import bubblecount.globalvar as gv
 from skimage.transform import rotate, hough_line, hough_line_peaks
 from skimage import io, img_as_ubyte
 from skimage.color import rgb2gray
@@ -10,7 +11,7 @@ from skimage.filters.rank import median
 from skimage.morphology import disk
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from .. import GlobalVariables as gv
+
 
 # analyzing RGB image through each channel 
 @adapt_rgb(each_channel)

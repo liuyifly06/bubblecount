@@ -1,9 +1,9 @@
 import sys, traceback, time
 import numpy as np
 from matplotlib import pyplot as plt
-from .. import GlobalVariables as gv
+import bubblecount.globalvar as gv
 
-def getInfo(filename = gv.__DIR__ + gv.__TrainImageDir__ + \
+def getinfo(filename = gv.__DIR__ + gv.__TrainImageDir__ + \
             'positiveInstances.dat'):
     f_read = open(filename, 'r')
     image_files    = []
@@ -21,7 +21,7 @@ def getInfo(filename = gv.__DIR__ + gv.__TrainImageDir__ + \
     return [image_files, bubble_num, bubble_regions]
 
 def distribution(binwidth = 5):
-    image_files, bubble_num, bubble_regions = getInfo()
+    image_files, bubble_num, bubble_regions = getinfo()
     
     bubble_all = np.array([])
     for bubble_region in bubble_regions:
@@ -43,7 +43,7 @@ def distribution(binwidth = 5):
 
 def main():
     try:
-        image_files, bubble_num, bubble_regions = getInfo()
+        image_files, bubble_num, bubble_regions = getinfo()
         f = open('manaul_count.dat','w')
         bubble_num.tofile(f, sep = ' ')
         f.close()
