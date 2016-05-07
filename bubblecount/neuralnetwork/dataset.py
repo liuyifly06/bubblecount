@@ -108,7 +108,7 @@ class DataSet(object):
         return self.extractInstances(index), self._labels[start:end]
 
 def read_data_sets(instanceSize, step, numOfClasses, instanceMode, 
-                   labelMode, imageName = '', dtype=tf.float32,
+                   labelMode, imageName = '', dtype = tf.float32,
                    plot_show = 0):
     class DataSets(object):
         pass
@@ -122,8 +122,7 @@ def read_data_sets(instanceSize, step, numOfClasses, instanceMode,
 
     [instances, labels, ylen, xlen, imagedata] = generateInstancesNN(
         instanceSize, step, numOfClasses, filenameList, labelMode, plot_show)
-    data_sets = DataSet(instances, labels, xlen, ylen, imagedata, step,
-                        dtype=dtype)
+    data_sets = DataSet(instances, labels, xlen, ylen, imagedata, step, dtype)
     return data_sets
 
 def generateInstancesNN(instanceSize, step, numOfClasses, filenameList, 
@@ -178,7 +177,7 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
     return [allInstances, allLabels, ylen, xlen, allImages]
 
 def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
-               scale = 0.2):
+               scale = 0.2, dtype = tf.float32):
     """
     parameters:
       Let xv, yv = numpy.meshgrid(x, y)
@@ -221,27 +220,27 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
     batch_num  = np.ceil(original_shape[0] / num_rows).astype(int)
      
     # place holder for tensorflow 
-    _x  = tf.placeholder(tf.float32, shape = [batch_size, 1])
-    _y  = tf.placeholder(tf.float32, shape = [batch_size, 1])
-    _cx = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
-    _cy = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
-    _a  = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
-    _b  = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
+    _x  = tf.placeholder(dtype, shape = [batch_size, 1])
+    _y  = tf.placeholder(dtype, shape = [batch_size, 1])
+    _cx = tf.placeholder(dtype, shape = [1, positiveLabels.shape[0]])
+    _cy = tf.placeholder(dtype, shape = [1, positiveLabels.shape[0]])
+    _a  = tf.placeholder(dtype, shape = [1, positiveLabels.shape[0]])
+    _b  = tf.placeholder(dtype, shape = [1, positiveLabels.shape[0]])
     
-    _s  = tf.constant(stride, dtype = tf.float32)
-    test = tf.ones([1, positiveLabels.shape[0]])
-    mx  = tf.matmul(_x, tf.ones([1, positiveLabels.shape[0]]))
-    my  = tf.matmul(_y, tf.ones([1, positiveLabels.shape[0]]))
-    mcx = tf.matmul(tf.ones([batch_size, 1]), _cx)
-    mcy = tf.matmul(tf.ones([batch_size, 1]), _cy)
-    ma  = tf.matmul(tf.ones([batch_size, 1]), _a)
-    mb  = tf.matmul(tf.ones([batch_size, 1]), _b)
+    _s  = tf.constant(stride, dtype = dtype)
+    test = tf.ones([1, positiveLabels.shape[0]], dtype)
+    mx  = tf.matmul(_x, tf.ones([1, positiveLabels.shape[0]], dtype))
+    my  = tf.matmul(_y, tf.ones([1, positiveLabels.shape[0]], dtype))
+    mcx = tf.matmul(tf.ones([batch_size, 1], dtype), _cx)
+    mcy = tf.matmul(tf.ones([batch_size, 1], dtype), _cy)
+    ma  = tf.matmul(tf.ones([batch_size, 1], dtype), _a)
+    mb  = tf.matmul(tf.ones([batch_size, 1], dtype), _b)
 
     if(mode == 'PRO'):
-      mx = tf.add(mx, tf.div(_s, tf.constant(2.0)))
-      my = tf.add(my, tf.div(_s, tf.constant(2.0)))
+      mx = tf.add(mx, tf.div(_s, tf.constant(2.0, dtype)))
+      my = tf.add(my, tf.div(_s, tf.constant(2.0, dtype)))
     
-    labels = gaussian2d(mx, my, mcx, mcy, ma, mb, tf.constant(scale))
+    labels = gaussian2d(mx, my, mcx, mcy, ma, mb, tf.constant(scale), dtype)
     labels = tf.reshape(labels, [num_rows, original_shape[1]])
 
     init = tf.initialize_all_variables()
@@ -270,11 +269,13 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
       image_labels[start_row:end_row] = labels.eval(session=sess,
                                                     feed_dict=feed)
 
-    results = image_labels            
+    results = image_labels
+          
     if(mode == 'NUM'):
-      detail   = tf.convert_to_tensor(image_labels, dtype = tf.float32)     
-      detail   = tf.expand_dims(tf.expand_dims(detail, 0),3)
-      template = tf.expand_dims(tf.expand_dims(tf.ones([size, size]), 2), 3)
+      detail   = tf.convert_to_tensor(image_labels, dtype = dtype)     
+      detail   = tf.reshape(detail, [-1, image_labels.shape[1],
+                            image_labels.shape[0], 1])
+      template = tf.ones([size, size, 1, 1], dtype)
       sums     = tf.nn.conv2d(detail, template, [1, stride, stride, 1], "SAME")
       labels   = tf.reduce_sum(tf.reduce_sum(sums, 3), 0)
       results  = labels.eval(session=sess)
@@ -286,7 +287,7 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
     sess.close()
     return [xy, results]
 
-def gaussian2d(x, y, cx, cy, a, b, scale):
+def gaussian2d(x, y, cx, cy, a, b, scale, dtype = tf.float32):
     """
     y, x : m x n 2D tensor. Position of calculation points 
            m is number of pixels for labeling
@@ -297,15 +298,15 @@ def gaussian2d(x, y, cx, cy, a, b, scale):
                    a and b are the width in x and y firection
     scale: scalar tensor representing scalar factor for bandwidth of Gaussian
     """    
-    A = tf.mul(tf.constant(100.0),
-        tf.inv(tf.mul(tf.constant(2.0*np.pi), tf.mul(a, b))),
+    A = tf.mul(tf.constant(100.0, dtype),
+        tf.inv(tf.mul(tf.constant(2.0*np.pi, dtype), tf.mul(a, b))),
         name = 'Amplitude')
 
-    powerX = tf.truediv(tf.pow(tf.sub(x, cx) , tf.constant(2.0)),
-        tf.mul(tf.constant(2.0),tf.pow(a, tf.constant(2.0))))
+    powerX = tf.truediv(tf.pow(tf.sub(x, cx) , tf.constant(2.0, dtype)),
+        tf.mul(tf.constant(2.0, dtype),tf.pow(a, tf.constant(2.0, dtype))))
     
-    powerY = tf.truediv(tf.pow(tf.sub(y, cy) , tf.constant(2.0)),
-        tf.mul(tf.constant(2.0),tf.pow(a, tf.constant(2.0))))
+    powerY = tf.truediv(tf.pow(tf.sub(y, cy) , tf.constant(2.0, dtype)),
+        tf.mul(tf.constant(2.0, dtype),tf.pow(a, tf.constant(2.0, dtype))))
     
     probability = tf.reduce_sum(
         tf.mul(A, tf.exp(tf.neg(tf.add(powerX, powerY)))), 1)
