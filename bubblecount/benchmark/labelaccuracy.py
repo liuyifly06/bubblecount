@@ -1,18 +1,28 @@
-import sys, traceback, multiprocessing, os
+# accuracy measurement method for generating instances 
+import multiprocessing, os
 import numpy as np
 from bubblecount.neuralnetwork import dataset as ds
 from bubblecount.preprocess.readinfo import getinfo
+from bubblecount.progressbar import progress
 from bubblecount import globalvar as gv
 from matplotlib import pyplot as plt
 from scipy.stats import linregress
 
-def labellinearity(patch_size, stride, numOfClasses, labelMode, plot_show = 1):
+def labellinearity(patch_size, stride, numOfClasses, labelMode,
+                   progress_show = 1, plot_show = 1):
+
     image_files, bubble_num, bubble_regions = getinfo()
     bubble_num_afterlabel  =  np.zeros(len(image_files))
+    probar = progress.progress(0, len(image_files))
+
     for i, image in enumerate(image_files):
+        probar.setCurrentIteration(i)
+        probar.setInfo(prefix_info = 'dataset linearity ...',
+                       suffix_info = image)
+        probar.printProgress()     
         image_ds = ds.read_data_sets(patch_size, stride, numOfClasses, 'test', 
                    labelMode, imageName = image)
-        labels = np.argmax(image_ds.labels, axis = 1)
+        labels = image_ds.labels
         bubble_num_afterlabel[i] = np.sum(labels)
 
     slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
@@ -52,7 +62,7 @@ def labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
       for stride in strides:
         for numclass in numOfClasses:
           for labelMode in labelModes:
-            pars.append((patch_size, stride, numclass, labelMode, 0))
+            pars.append((patch_size, stride, numclass, labelMode, 0, 0))
 
     if(MaxProcessNum <= 0):
         pool = multiprocessing.Pool()
@@ -81,30 +91,3 @@ def labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
     #restore showing process bar status
     gv.show_progress = True
     return np.asarray(r_squared)
-
-def main():
-    try:
-        
-        # labellinearity(10, 1, 100, 'PRO', plot_show = 1)
-        #"""
-        patch_sizes = [10, 100]
-        strides = [10, 20]
-        numOfClasses = [2, 10, 100]
-        labelModes = ['PRO', 'NUM']
-        """
-        patch_sizes = [20,20]
-        strides = [100]
-        numOfClasses = [100]
-        labelModes = ['PRO']
-        """
-        labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
-                              MaxProcessNum = -1)
-        
-    except KeyboardInterrupt:
-        print "Shutdown requested... exiting"
-    except Exception:
-        traceback.print_exc(file=sys.stdout)
-    sys.exit(0)
-
-if __name__ == '__main__':
-    main()

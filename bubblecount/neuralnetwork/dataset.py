@@ -1,37 +1,44 @@
-"""Functions for downloading and reading MNIST data."""
 import tensorflow as tf
-import sys, traceback, time, warnings
 import numpy as np
+import bubblecount.globalvar as gv
 from matplotlib import pyplot as plt
 from skimage import io
 from bubblecount.preprocess.readinfo import getinfo
-import bubblecount.globalvar as gv
-from bubblecount.progressbar import progress
 
 class DataSet(object):
-    def __init__(self, images, labels, xlength, ylength, dtype=tf.float32):
+    def __init__(self, instances, labels, xlength, ylength, imagedata, stride,
+                 dtype=tf.float32):
+
         dtype = tf.as_dtype(dtype).base_dtype
         if dtype not in (tf.uint8, tf.float32):
-            raise TypeError('Invalid image dtype %r, expected uint8 or float32'
+          raise TypeError('Invalid image dtype %r, expected uint8 or float32'
                             % dtype)
-        assert images.shape[0] == labels.shape[0], (
-            'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
-        self._num_examples = images.shape[0]
+        assert instances.shape[0] == labels.shape[0], (
+          'instances.shape: %s labels.shape: %s' % (instances.shape,
+                                                    labels.shape))
+        self._num_examples = instances.shape[0]
 
         if dtype == tf.float32:
-          # Convert from [0, 255] -> [0.0, 1.0].
-          images = images.astype(np.float32)
-          images = np.multiply(images, 1.0 / 255.0)
-        self._images = images
-        self._labels = labels
+          for i in range(len(imagedata)):
+            imagedata[i] = imagedata[i].astype(np.float32)
+            imagedata[i] = np.multiply(imagedata[i], 1.0 / 255.0)
+
+        self._instances        = instances
+        self._labels           = labels
         self._epochs_completed = 0
-        self._index_in_epoch = 0
-        self._xlength = xlength
-        self._ylength = ylength
+        self._index_in_epoch   = 0
+        self._xlength          = xlength
+        self._ylength          = ylength
+        self._imagedata        = imagedata
+        self._stride           = stride
 
     @property
-    def images(self):
-        return self._images
+    def imagedata(self):
+        return self._imagedata
+    
+    @property
+    def instances(self):
+        return self._instances
 
     @property
     def labels(self):
@@ -53,8 +60,35 @@ class DataSet(object):
     def ylength(self):
         return self._ylength
 
+    @property
+    def images(self):
+        index = np.ones((self._instances.shape[0],
+                         self._instances.shape[1]), dtype=bool)
+        return self.extractInstances(index)
+
+    def extractInstances(self, index):
+        trainable = []
+        allinstances = self._instances[index]
+        
+        ncols = self._instances.shape[1]
+        nrows = np.size(allinstances)/ncols
+
+        allinstances = np.reshape(allinstances, (nrows, ncols))
+        for i in range(allinstances.shape[0]):
+            instance = allinstances[i].astype(int)
+            current  = self._imagedata[instance[2]]
+            trainable.append(
+              np.reshape(current[instance[1]:(instance[1]+self._stride),
+                                 instance[0]:(instance[0]+self._stride)],
+                         (self._stride**2*3)
+              )
+            )
+        return np.array(trainable)
+        
     def next_batch(self, batch_size):
         """Return the next `batch_size` examples from this data set."""
+        index = np.zeros((self._instances.shape[0],
+                          self._instances.shape[1]), dtype=bool)
         start = self._index_in_epoch
         self._index_in_epoch += batch_size
         if self._index_in_epoch > self._num_examples:
@@ -63,14 +97,15 @@ class DataSet(object):
             # Shuffle the data
             perm = np.arange(self._num_examples)
             np.random.shuffle(perm)
-            self._images = self._images[perm]
-            self._labels = self._labels[perm]
+            self._instances = self._instances[perm]
+            self._labels    = self._labels[perm]
             # Start next epoch
             start = 0
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
-        return self._images[start:end], self._labels[start:end]
+        index[start:end] = True
+        return self.extractInstances(index), self._labels[start:end]
 
 def read_data_sets(instanceSize, step, numOfClasses, instanceMode, 
                    labelMode, imageName = '', dtype=tf.float32,
@@ -85,9 +120,10 @@ def read_data_sets(instanceSize, step, numOfClasses, instanceMode,
     elif 'test' in instanceMode:
         filenameList = [imageName]
 
-    [images, labels, ylen, xlen] = generateInstancesNN(instanceSize, 
-                step, numOfClasses, filenameList, labelMode, plot_show)
-    data_sets = DataSet(images, labels, xlen, ylen, dtype=dtype)
+    [instances, labels, ylen, xlen, imagedata] = generateInstancesNN(
+        instanceSize, step, numOfClasses, filenameList, labelMode, plot_show)
+    data_sets = DataSet(instances, labels, xlen, ylen, imagedata, step,
+                        dtype=dtype)
     return data_sets
 
 def generateInstancesNN(instanceSize, step, numOfClasses, filenameList, 
@@ -95,87 +131,42 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
 
     allInstances = np.array([])
     allLabels    = np.array([])
-    xlen = 0
-    ylen = 0
+    allImages    = []
+    xlen         = 0
+    ylen         = 0
 
     image_files, bubble_num, bubble_regions = getinfo()
 
-    for i, imageFilename in enumerate(filenameList):
+    for i, imageFilename in enumerate(filenameList):       
         print ('Generating instances from [' + imageFilename + 
-               ']... { patch width: ' + str(instanceSize) + ' step: ' + 
+               ']... { patch width: ' + str(instanceSize) + ' stride: ' + 
                str(step) + ' }')
 
         filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
-        imageData = io.imread(filename)
-        
-        positiveLabels = bubble_regions[image_files.index(imageFilename)]
-
-        [m,n,c] = imageData.shape
-
-        Y = np.arange(np.floor(instanceSize/2), 
-                      (m - np.ceil(instanceSize/2)), step)
-        X = np.arange(np.floor(instanceSize/2),
-                      (n - np.ceil(instanceSize/2)), step)
-    
+        imageData = io.imread(filename)        
+        positiveLabels = bubble_regions[image_files.index(imageFilename)]        
+        [m, n, c] = imageData.shape
+        Y = np.arange(0, m - m%step, step)
+	X = np.arange(0, n - n%step, step)
         ylen = len(Y)
         xlen = len(X)
+        
+        instances, labels = patchlabel(Y,X,positiveLabels,size = instanceSize,
+                                       stride = step, mode = mode)
 
-        image_show = np.zeros((ylen, xlen))
-        """
-        if(i <= 1):
-            print ('memory cost for one image is '+
-                   str(instanceSize**2*c*xlen*ylen*4) +
-                   ' bytes')
-        """
-        instances = np.zeros((instanceSize ** 2 * c, xlen * ylen ))
-        labels = np.zeros((numOfClasses, xlen * ylen))
-
-        ind = -1    
-        start_time = time.time()
-
-        PROGRESS = progress.progress(0, xlen*ylen,
-            prefix_info = imageFilename,
-            suffix_info = str(i+1)+'/'+str(len(filenameList)) )
-
-        for iy, currentY in enumerate(Y):
-            for ix, currentX in enumerate(X):      
-       
-                boundaryT = currentY - np.floor(instanceSize/2)
-                boundaryD = currentY + np.floor(instanceSize/2)
-                boundaryL = currentX - np.floor(instanceSize/2)
-                boundaryR = currentX + np.floor(instanceSize/2)
-
-                ind = ind + 1
-                temp = (imageData[int(boundaryT):int(boundaryD),
-                                  int(boundaryL):int(boundaryR), :])
-                instances[:, ind] = np.reshape(temp,(instanceSize**2*c, 1)).T
-                
-                assert (mode == 'NUM' or mode == 'PRO')
-                if  (mode == 'PRO'):
-                    probabiliyIndex = gaussian2d(currentY, currentX,
-                    positiveLabels, scale = 0.3) * (numOfClasses/2 + 2)
-                    probabiliyIndex = min(numOfClasses-1, probabiliyIndex)
-                    image_show[iy, ix] = int(probabiliyIndex)               
-                    labels[int(probabiliyIndex), ind] = 1
-                elif(mode == 'NUM'):
-                    box = [boundaryT, boundaryD, boundaryL, boundaryR]
-                    bubbleNums = numberOfBubbles(box, positiveLabels)
-                    bubbleNums = bubbleNums * max(1, numOfClasses/10)
-                    bubbleNums = min(numOfClasses-1, bubbleNums)
-                    image_show[iy, ix] = np.around(bubbleNums)                
-            	    labels[int(bubbleNums), ind] = 1;
-                PROGRESS.setCurrentIteration(ix + iy*xlen + 1)
-                PROGRESS.printProgress()
-
+        instances = np.append(instances, i*np.ones((instances.shape[0], 1)),
+                                 axis = 1)
+        allImages.append(imageData)
         # append current instance data to all instance data
-        if allInstances.size == 0:
-            allInstances = instances.T
-            allLabels = labels.T
+        if (allInstances.size == 0):
+            allInstances = instances
+            allLabels    = labels
         else:
-            allInstances = np.append(allInstances, instances.T, axis=0)
-            allLabels = np.append(allLabels, labels.T, axis=0)
+            allInstances = np.append(allInstances, instances, axis=0)
+            allLabels    = np.append(allLabels, labels, axis=0)
 
         if(plot_show == 1):
+            image_show = np.reshape(labels, (ylen, xlen))
             fig, ax = plt.subplots(2)
             ax[0].imshow(imageData)
             ax[0].set_title('Original Image')
@@ -184,82 +175,140 @@ def generateInstancesNN(instanceSize, step, numOfClasses, filenameList,
             plt.colorbar(img)
             plt.show()
 
-    return [allInstances, allLabels, ylen, xlen]
+    return [allInstances, allLabels, ylen, xlen, allImages]
 
-def gaussian2d(y, x, positiveLabels, scale = 0.2):
-    x_c = positiveLabels[:,0] + np.ceil(np.true_divide(positiveLabels[:,2], 2))
-    y_c = positiveLabels[:,1] + np.ceil(np.true_divide(positiveLabels[:,3], 2))
-    a = np.ceil(np.true_divide(positiveLabels[:,2], 2)) * scale
-    b = np.ceil(np.true_divide(positiveLabels[:,3], 2)) * scale
-
-    A = 100*np.true_divide(1, 2*np.pi*np.multiply(a, b))
-
-    powerX = np.true_divide(np.power(np.subtract(x,x_c),2),
-                            np.multiply(2, np.power(a,2))) 
-    powerY = np.true_divide(np.power(np.subtract(y,y_c),2),
-                            np.multiply(2, np.power(b,2)))
+def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
+               scale = 0.2):
+    """
+    parameters:
+      Let xv, yv = numpy.meshgrid(x, y)
+      (xv(i,j), yv(i,j)) represents the position of left-top corner of a small
+        image patch  
+      x: possibe values of X axis (array of 1*n, in type of int)
+      y: possibe values of X axis (array of 1*n, in type of int)
+      positiveLabels: regions of bubbles
+      size: width of small image patch (as a square)
+      stride: distance between two adjecent image patches
+      mode: labeling method (can be labeled as sum of values of all pixes
+        or values of center pixels)
+      scale: adjust bandwidth of gaussian function
+    """
+    if(np.size(positiveLabels) == 0):
+      xv, yv = np.meshgrid(x, y)
+      xy = np.append(np.reshape(xv, (np.size(xv),1)), 
+                     np.reshape(yv, (np.size(yv),1)), axis = 1)
+      results = np.zeros((xy.shape[0],1))
+      return [xy, results]
     
-    Pr = np.multiply(A, np.exp(-(powerX+powerY)))
-    return np.sum(Pr)
-
-def numberOfBubbles(box, positiveLabels):
-    bubbleNum = 0
-
-    area = np.multiply(positiveLabels[:,2], positiveLabels[:,3])
-
-    region = np.array([positiveLabels[:,1],
-                       positiveLabels[:,1] + positiveLabels[:,3],
-                       positiveLabels[:,0],
-                       positiveLabels[:,0] + positiveLabels[:,2]]).T
-
-    index = np.all([np.logical_not(np.any(
-           [region[:,0] >= box[1], region[:,1] <= box[0]], axis = 0)),
-                    np.logical_not(np.any(
-           [region[:,2] >= box[3], region[:,3] <= box[2]], axis = 0))],
-           axis = 0)
+    MEMORY_LIMIT = 1024*1024*1024
+    BYTES_PER_NUMBER = 4
+    NUMBER_OF_MATRIX = 7
     
-    if(np.sum(index)==0):
-        return 0
-    edge = np.ones((np.sum(index), 4))
+    if(mode == 'PRO'):
+      xv, yv = np.meshgrid(x, y)
+    elif(mode == 'NUM'):
+      xv, yv = np.meshgrid(np.arange(x[-1] + stride), np.arange(y[-1] + stride))
     
-    edge[:,0] = np.absolute(np.subtract(region[index, 0], box[1]))
-    edge[:,1] = np.absolute(np.subtract(region[index, 1], box[0]))
-    edge[:,2] = box[1] - box[0]
-    edge[:,3] = region[index, 1] - region[index, 0]
-
-    Yedge = np.amin(edge, axis = 1)
-
-    edge[:,0] = np.absolute(np.subtract(region[index, 2], box[3]))
-    edge[:,1] = np.absolute(np.subtract(region[index, 3], box[2]))
-    edge[:,2] = box[3] - box[2]
-    edge[:,3] = region[index, 3] - region[index, 2]
-
-    Xedge = np.amin(edge, axis = 1)
+    original_shape = xv.shape
+    xv = np.reshape(xv,(np.size(xv),1))
+    yv = np.reshape(yv,(np.size(yv),1))
     
-    bubbleIncludes = np.true_divide(np.multiply(Xedge, Yedge), area[index])   
-    return np.sum(bubbleIncludes)
+    memory_required = (np.size(xv) * positiveLabels.shape[0] *
+                       BYTES_PER_NUMBER * NUMBER_OF_MATRIX)
+    num_rows = max(np.floor(MEMORY_LIMIT / BYTES_PER_NUMBER / NUMBER_OF_MATRIX
+          / positiveLabels.shape[0] / original_shape[1]), 1).astype(int)
+    batch_size = num_rows * original_shape[1]
+    batch_num  = np.ceil(original_shape[0] / num_rows).astype(int)
+     
+    # place holder for tensorflow 
+    _x  = tf.placeholder(tf.float32, shape = [batch_size, 1])
+    _y  = tf.placeholder(tf.float32, shape = [batch_size, 1])
+    _cx = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
+    _cy = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
+    _a  = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
+    _b  = tf.placeholder(tf.float32, shape = [1, positiveLabels.shape[0]])
+    
+    _s  = tf.constant(stride, dtype = tf.float32)
+    test = tf.ones([1, positiveLabels.shape[0]])
+    mx  = tf.matmul(_x, tf.ones([1, positiveLabels.shape[0]]))
+    my  = tf.matmul(_y, tf.ones([1, positiveLabels.shape[0]]))
+    mcx = tf.matmul(tf.ones([batch_size, 1]), _cx)
+    mcy = tf.matmul(tf.ones([batch_size, 1]), _cy)
+    ma  = tf.matmul(tf.ones([batch_size, 1]), _a)
+    mb  = tf.matmul(tf.ones([batch_size, 1]), _b)
 
-def main():
-     try:
-         instanceSize = 50;
-         step = 5;
-         edge = 4;
-         scale =10;
-	 numOfClasses = 100;
-         read_data_sets(instanceSize, step, numOfClasses, 'train', 'PRO',
-                        plot_show = 1)
-         read_data_sets(instanceSize, step, numOfClasses, 'test',  'PRO',
-                        'detector_1_no_5_angle_3.jpg', plot_show = 1)
-         read_data_sets(instanceSize, step, numOfClasses, 'train', 'NUM',
-                        plot_show = 1)
-         read_data_sets(instanceSize, step, numOfClasses, 'test',  'NUM',
-                        'detector_1_no_5_angle_3.jpg', plot_show = 1)
-     except KeyboardInterrupt:
-         print "Shutdown requested... exiting"
-     except Exception:
-         traceback.print_exc(file=sys.stdout)
-     sys.exit(0)
- 
-if __name__ == '__main__':
-     main()
+    if(mode == 'PRO'):
+      mx = tf.add(mx, tf.div(_s, tf.constant(2.0)))
+      my = tf.add(my, tf.div(_s, tf.constant(2.0)))
+    
+    labels = gaussian2d(mx, my, mcx, mcy, ma, mb, tf.constant(scale))
+    labels = tf.reshape(labels, [num_rows, original_shape[1]])
+
+    init = tf.initialize_all_variables()
+    sess = tf.Session()
+    sess.run(init)
+
+    image_labels = np.zeros(original_shape)
+    
+    for i in range(batch_num):
+      start = i * batch_size
+      end   = (i+1) * batch_size
+      feed  = {_x : xv[start:end], _y: yv[start:end],
+              _cx: np.reshape(np.add(positiveLabels[:,0],
+                      np.true_divide(positiveLabels[:,2], 2)),
+                      (1, positiveLabels.shape[0])),
+              _cy: np.reshape(np.add(positiveLabels[:,1],
+                      np.true_divide(positiveLabels[:,3], 2)),
+                      (1, positiveLabels.shape[0])),
+              _a : np.reshape(positiveLabels[:,2],
+                      (1, positiveLabels.shape[0])),
+              _b : np.reshape(positiveLabels[:,3],
+                      (1, positiveLabels.shape[0]))}
+      #sess.run(labels, feed_dict=feed)
+      start_row = start / original_shape[1]
+      end_row   = end / original_shape[1]
+      image_labels[start_row:end_row] = labels.eval(session=sess,
+                                                    feed_dict=feed)
+
+    results = image_labels            
+    if(mode == 'NUM'):
+      detail   = tf.convert_to_tensor(image_labels, dtype = tf.float32)     
+      detail   = tf.expand_dims(tf.expand_dims(detail, 0),3)
+      template = tf.expand_dims(tf.expand_dims(tf.ones([size, size]), 2), 3)
+      sums     = tf.nn.conv2d(detail, template, [1, stride, stride, 1], "SAME")
+      labels   = tf.reduce_sum(tf.reduce_sum(sums, 3), 0)
+      results  = labels.eval(session=sess)
+      xv, yv = np.meshgrid(x, y)
+
+    xy = np.append(np.reshape(xv, (np.size(xv),1)), 
+                   np.reshape(yv, (np.size(yv),1)), axis = 1)
+    results = np.reshape(results, (np.size(results), 1))
+    sess.close()
+    return [xy, results]
+
+def gaussian2d(x, y, cx, cy, a, b, scale):
+    """
+    y, x : m x n 2D tensor. Position of calculation points 
+           m is number of pixels for labeling
+           n is number of Gaussians in the caluclation
+    cx, cy, a, b : m x n 2D tensor.
+                   Parameters of Gaussian function
+                   cx and cy are center position
+                   a and b are the width in x and y firection
+    scale: scalar tensor representing scalar factor for bandwidth of Gaussian
+    """    
+    A = tf.mul(tf.constant(100.0),
+        tf.inv(tf.mul(tf.constant(2.0*np.pi), tf.mul(a, b))),
+        name = 'Amplitude')
+
+    powerX = tf.truediv(tf.pow(tf.sub(x, cx) , tf.constant(2.0)),
+        tf.mul(tf.constant(2.0),tf.pow(a, tf.constant(2.0))))
+    
+    powerY = tf.truediv(tf.pow(tf.sub(y, cy) , tf.constant(2.0)),
+        tf.mul(tf.constant(2.0),tf.pow(a, tf.constant(2.0))))
+    
+    probability = tf.reduce_sum(
+        tf.mul(A, tf.exp(tf.neg(tf.add(powerX, powerY)))), 1)
+
+    return probability
 

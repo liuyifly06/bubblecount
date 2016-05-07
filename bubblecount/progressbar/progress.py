@@ -1,4 +1,4 @@
-import sys, traceback, time
+import sys, time
 import bubblecount.globalvar as gv
 
 class progress(object):
@@ -63,23 +63,3 @@ class progress(object):
         sys.stdout.flush()
         if self.iteration == self.total:
             print("\n")
-
-def main():
-    try:
-        n = 1000
-        test = progress(0,n)        
-        for i in range(n):
-            test.setCurrentIteration(i+1)
-            test.setInfo(prefix_info = 'Processing ... ',
-                         suffix_info = 'Iteration '+str(i)+'/'+str(n))
-            test.printProgress()
-            time.sleep(0.1)
-           
-    except KeyboardInterrupt:
-        print "Shutdown requested... exiting"
-    except Exception:
-        traceback.print_exc(file=sys.stdout)
-    sys.exit(0)
-
-if __name__ == '__main__':
-    main()

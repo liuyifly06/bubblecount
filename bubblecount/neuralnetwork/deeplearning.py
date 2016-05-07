@@ -18,25 +18,59 @@ from bubblecount import globalvar as gv
 from bubblecount.preprocess.readinfo import getinfo
 from bubblecount.progressbar import progress
 
-def train(batchNum = 500, batchSize = 200000, learningRate = 0.001,
-          layers = [5000, 10000, 5000], ImagePatchWidth = 20,
+def train(batchNum = 500, batchSize = 200, learningRate = 0.001,
+          layers = [200, 400, 200], ImagePatchWidth = 20,
           ImagePatchStep = 4, labelOptionNum = 100,
           labelMode = 'PRO'):
+
     trainDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep,
                                 labelOptionNum, 'train', labelMode);
     print ('Training deep learning neural network ...')
+    """TensorFlow DNN Classifier model.
+    Parameters:
+      hidden_units: List of hidden units per layer.
+      n_classes: Number of classes in the target.
+      batch_size: Mini batch size.
+      steps: Number of steps to run over data.
+      optimizer: Optimizer name (or class), for example "SGD", "Adam", "Adagrad".
+      learning_rate: If this is constant float value, no decay function is used.
+        Instead, a customized decay function can be passed that accepts
+        global_step as parameter and returns a Tensor.
+        e.g. exponential decay function:
+        def exp_decay(global_step):
+            return tf.train.exponential_decay(
+                learning_rate=0.1, global_step,
+                decay_steps=2, decay_rate=0.001)
+      class_weight: None or list of n_classes floats. Weight associated with
+        classes for loss computation. If not given, all classes are
+        supposed to have weight one.
+      continue_training: when continue_training is True, once initialized
+        model will be continuely trained on every call of fit.
+      config: RunConfig object that controls the configurations of the
+        session, e.g. num_cores, gpu_memory_fraction, etc.
+      dropout: When not None, the probability we will drop out a given coordinate.
+    """
     classifier = skflow.TensorFlowDNNClassifier(
-        hidden_units = layers,
-        n_classes = labelOptionNum,
-        batch_size = batchSize,
-        steps = batchNum,
-        learning_rate = learningRate)
-
-    if(gv.log_write):
-        classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1),
-                   logdir = gv.__DIR__ + gv.tensorflow_log_dir)
-    else:
-        classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1))
+        hidden_units      = layers,
+        n_classes         = labelOptionNum,
+        batch_size        = 32,
+        steps             = 200,
+        optimizer         = 'Adagrad', #"SGD", "Adam", "Adagrad"
+        learning_rate     = learningRate,
+        class_weight      = None,
+        clip_gradients    = 5.0,
+        continue_training = True,
+        config            = None,
+        verbose           = 1,
+        dropout           = None )
+    
+    for i in range(batchNum):
+        images, labels = trainDS.next_batch(batchSize)
+        if(gv.log_write):
+            classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1),
+                           logdir = gv.__DIR__ + gv.tensorflow_log_dir)
+        else:
+            classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1))
     return classifier
 
 def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
