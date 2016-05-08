@@ -10,20 +10,21 @@ from scipy.stats import linregress
 
 def labellinearity(patch_size, stride, numOfClasses, labelMode,
                    progress_show = 1, plot_show = 1):
-
+    gv.ds_show_filename = False 
     image_files, bubble_num, bubble_regions = getinfo()
     bubble_num_afterlabel  =  np.zeros(len(image_files))
     probar = progress.progress(0, len(image_files))
 
     for i, image in enumerate(image_files):
-        probar.setCurrentIteration(i)
+        probar.setCurrentIteration(i+1)
         probar.setInfo(prefix_info = 'dataset linearity ...',
                        suffix_info = image)
-        probar.printProgress()     
+        probar.printProgress()  
         image_ds = ds.read_data_sets(patch_size, stride, numOfClasses, 'test', 
                    labelMode, imageName = image)
         labels = image_ds.labels
         bubble_num_afterlabel[i] = np.sum(labels)
+ 
 
     slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
                                                       bubble_num_afterlabel))

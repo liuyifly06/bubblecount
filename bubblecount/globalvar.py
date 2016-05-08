@@ -5,11 +5,11 @@ __DIR__ = os.path.dirname(os.path.realpath(__file__)) + '/..'
 
 #Train Images
 __TrainImage__ = [ \
-'detector_5_no_5_angle_2.jpg', \
-'detector_7_no_5_angle_2.jpg'
+'detector_1_no_5_angle_2.jpg', \
+'detector_2_no_5_angle_3.jpg'
 ]
 __TrainImageDir__ = '/images/AfterPreprocessing/'
-
+#__TrainImageDir__ = '/images/original/'
 #benchmark
 ac__file_dir = '/bubblecount/benchmark/'
 
@@ -38,9 +38,10 @@ cu__result_filename = 'curvatureResult.txt'
 
 #show progress bar
 show_progress = True
-
 #training logs
 log_write = True
+#data set generation /neuralnetwork/dataset.py in generateInstancesNN()
+ds_show_filename = True
 
 #test
 label_linearity_file_dir = '/result/benchmark/'

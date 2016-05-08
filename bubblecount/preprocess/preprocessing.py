@@ -1,4 +1,3 @@
-import sys, traceback, time
 import numpy as np
 import bubblecount.globalvar as gv
 from skimage.transform import rotate, hough_line, hough_line_peaks
@@ -11,7 +10,7 @@ from skimage.filters.rank import median
 from skimage.morphology import disk
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+from bubblecount.progressbar import progress
 
 # analyzing RGB image through each channel 
 @adapt_rgb(each_channel)
@@ -97,14 +96,14 @@ def interest_region(image, plot_image = 0, lid_thickness = 680, \
             left = np.amin(temp)+int(lid_thickness/2)
             right = np.amax(temp)+int(lid_thickness/2)
     else:
-        left = 1700
-        right = 3600-bot_thickness
+        left = 1000 + lid_thickness
+        right = 3600 - bot_thickness
 
         bottom = bottom + side_thickness
         top = top - side_thickness
         
     image_rotation = rotate(image, rotate_angle*180)        
-    interest_image = image_rotation[bottom:top, left:right]
+    interest_image = image_rotation[int(bottom):int(top), int(left):int(right)]
     
     if(plot_image == 1):
         fig, ax = plt.subplots(2,3)
@@ -159,7 +158,8 @@ def interest_region(image, plot_image = 0, lid_thickness = 680, \
 
     return [interest_image, [bottom,top,left,right], rotate_angle*180]
 
-def test(bubble_filename, background_filename, Window_Size = 5, plot_image = 1):
+def test(bubble_filename, background_filename, Window_Size = 5, plot_image = 1,
+         pars = [1, 600, 50, 0, 0.5, 0.5]):
     # Load Image
     print 'Start reading images: \n    ' + bubble_filename
     image = io.imread(gv.__DIR__ + gv.pp__image_dir + bubble_filename)
@@ -167,9 +167,9 @@ def test(bubble_filename, background_filename, Window_Size = 5, plot_image = 1):
     background = io.imread(gv.__DIR__ + gv.pp__image_dir + background_filename)
     print 'Pre processing .. '  
     pre_image = noise_reduction(image, background, Window_Size, 0)
-    interest_image = interest_region(image, plot_image = 1, \
-                      lid_thickness = 650, bot_thickness = 50, \
-                      side_thickness = 40, th_x = 0.5, th_y = 0.5)
+    interest_image = interest_region(image, plot_image = pars[0], 
+        lid_thickness = pars[1], bot_thickness = pars[2],
+        side_thickness = pars[3], th_x = pars[4], th_y = pars[5])
 
     if(plot_image == 1):
         ## plot image
@@ -182,27 +182,32 @@ def test(bubble_filename, background_filename, Window_Size = 5, plot_image = 1):
         ax[2].set_title('Object Extaction')
         plt.show()
 
-def batch_process():
+def batch_process(pars = [0, 630, 50, 40, 0.5, 0.5], label = False):
     f_read = open(gv.__DIR__ + gv.pp__image_dir + 'positiveInstances.dat', 'r')
     f_write = open(gv.__DIR__+ gv.pp__result_dir+ 'positiveInstances.dat', 'w')
-
-    for line in f_read:
+    num_lines = sum(1 for line in f_read)
+    f_read.seek(0)
+    probar = progress.progress(0, num_lines)
+    for i, line in enumerate(f_read):
         line_list = line.split()
         image_file = line_list[0]
         ref_file   = image_file[0:15] + '_background.jpg'
         ref_save_name = image_file[0:23] + '_background.jpg'
+        probar.setCurrentIteration(i+1)
+        probar.setInfo(prefix_info = 'Preprocessing ...',
+                       suffix_info = image_file)
+        probar.printProgress()
 
-        print 'Processing ' + image_file
         image = io.imread(gv.__DIR__ + gv.pp__image_dir + image_file)
         ref   = io.imread(gv.__DIR__ + gv.pp__image_dir + ref_file)
 
-        [interest_image, margin, angle] = interest_region(image, \
-                            plot_image = 0, lid_thickness = 630, \
-                        bot_thickness = 50, side_thickness = 40,\
-                                         th_x = 0.5, th_y = 0.5)
+        [interest_image, margin, angle] = interest_region(image,
+                 plot_image = pars[0], lid_thickness = pars[1],
+                 bot_thickness = pars[2], side_thickness = pars[3],
+                 th_x = pars[4], th_y = pars[5])
         # generate background
         ref = rotate(ref, angle)
-        ref = ref[margin[0]:margin[1], margin[2]:margin[3]]
+        ref = ref[int(margin[0]):int(margin[1]), int(margin[2]):int(margin[3])]
 
         # rotation of labeling box
         origin_y = (image.shape[0]-1)/2
@@ -247,7 +252,8 @@ def batch_process():
                    regions.append(new_x2 - new_x1)
                    regions.append(new_y2 - new_y1)
                    num = num + 1
-                   #interest_image[new_y1:new_y2, new_x1:new_x2, 0] = 1
+                   if(label):
+                       interest_image[new_y1:new_y2, new_x1:new_x2, 0] = 1
 
         io.imsave(gv.__DIR__+ gv.pp__result_dir + ref_save_name, ref) 
         io.imsave(gv.__DIR__+ gv.pp__result_dir + image_file, interest_image) 
@@ -261,23 +267,3 @@ def batch_process():
 
     f_read.close()
     f_write.close()
-
-def main():
-    try:
-        # Constants
-        Window_Size = 5
-        # Default Parameters        
-        if len(sys.argv) >= 2:
-            print '\n Test Mode \n'
-            test(sys.argv[1], sys.argv[2])        
-        else:
-            print 'Batch Processing ...'
-            batch_process()        
-    except KeyboardInterrupt:
-        print "Shutdown requested... exiting"
-    except Exception:
-        traceback.print_exc(file=sys.stdout)
-    sys.exit(0)
-
-if __name__ == '__main__':
-    main()

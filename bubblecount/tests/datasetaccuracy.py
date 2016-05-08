@@ -3,7 +3,7 @@ from bubblecount.benchmark import labelaccuracy as la
 
 def main():
     try:
-        la.labellinearity(10, 1, 100, 'NUM', plot_show = 1)
+        la.labellinearity(10, 1, 100, 'PRO', plot_show = 1)
         """
         patch_sizes = [10, 100]
         strides = [10, 20]

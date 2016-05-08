@@ -6,7 +6,7 @@
 #matplotlib.use('Agg')
 ###############
 
-import sys, traceback, time, skflow
+import time, skflow, multiprocessing, os
 import os.path
 import numpy as np
 import dataset as ds
@@ -20,13 +20,13 @@ from bubblecount.progressbar import progress
 
 def train(batchNum = 500, batchSize = 200, learningRate = 0.001,
           layers = [200, 400, 200], ImagePatchWidth = 20,
-          ImagePatchStep = 4, labelOptionNum = 100,
+          ImagePatchStep = 4, labelOptionNum = 0,
           labelMode = 'PRO'):
 
     trainDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep,
                                 labelOptionNum, 'train', labelMode);
     print ('Training deep learning neural network ...')
-    """TensorFlow DNN Classifier model.
+    """TensorFlow-skflow DNN Classifier model.
     Parameters:
       hidden_units: List of hidden units per layer.
       n_classes: Number of classes in the target.
@@ -53,28 +53,35 @@ def train(batchNum = 500, batchSize = 200, learningRate = 0.001,
     classifier = skflow.TensorFlowDNNClassifier(
         hidden_units      = layers,
         n_classes         = labelOptionNum,
-        batch_size        = 32,
-        steps             = 200,
+        batch_size        = batchSize,
+        steps             = 1,
         optimizer         = 'Adagrad', #"SGD", "Adam", "Adagrad"
         learning_rate     = learningRate,
+        continue_training = True)
+    """
         class_weight      = None,
         clip_gradients    = 5.0,
-        continue_training = True,
         config            = None,
         verbose           = 1,
-        dropout           = None )
-    
+        dropout           = None 
+    """
+    probar = progress.progress(0, batchNum)
+    gv.log_write = False
     for i in range(batchNum):
+        probar.setCurrentIteration(i+1)
+        probar.setInfo(prefix_info = 'Training ...',
+                       suffix_info = 'Batch: ' + str(i+1) + '/' + str(batchNum))
+        probar.printProgress()
         images, labels = trainDS.next_batch(batchSize)
         if(gv.log_write):
-            classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1),
+            classifier.fit(images, labels,
                            logdir = gv.__DIR__ + gv.tensorflow_log_dir)
         else:
-            classifier.fit(trainDS.images, np.argmax(trainDS.labels, axis = 1))
+            classifier.fit(images, labels)
     return classifier
 
 def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
-         labelOptionNum = 100, labelMode = 'PRO'):
+         labelOptionNum = 0, labelMode = 'PRO'):
     image_files, bubble_num, bubble_regions = getinfo()
 
     result_filename   = gv.dp__result_filename
@@ -84,10 +91,7 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
     correct  = np.zeros(4)
     accuracy = np.zeros(4)
     totalnum_instances = 0
-
     index = -1
-    start_time = time.time()
-
     PROGRESS = progress.progress(0, len(image_files), prefix_info = 'Labeling ')
     
     labeled_number = np.zeros((len(image_files),1))
@@ -98,7 +102,7 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
                                    imageName = image_file)
         y = classifier.predict(testDS.images)
         index = index + 1
-        result[index] = np.sum(y)      
+        result[index] = np.sum(y)
         # saving labeled result as image
         if(gv.dp_image_save):
             io.imsave(gv.__DIR__ + gv.dp__image_dir + image_file,
@@ -123,48 +127,71 @@ def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
         labeled_number.tofile('labeled_number.dat', sep = " ")
     return [result, accuracy]
 
-def tuningParameters( batch_num = 10000,
-                      batch_size = 2000,
+def multi_run_wrapper(args):
+    return performance(*args)
+
+def tuningParameters( MaxProcessNum = 8,
+                      batch_num = [10000],
+                      batch_size = [2000],
                       learning_rate = [0.001, 0.005, 0.01, 0.05],
                       ins_size = [10, 20, 50, 100, 150],
                       stride = [5],
                       label_option = [10, 100, 1000],
                       label_mode =['PRO', 'NUM'] ):
-    image_files, bubble_num, bubble_regions = getinfo()
-    par_evaluation = np.array([])
-    total = (len(learning_rate) * len(ins_size) * len(stride) *
-             len(label_option) * len(label_mode))
-    iteration = 0
-    PROGRESS = progress.progress(iteration, total,
-            prefix_info = 'Tuning Parameters')
-    for ins in ins_size:
-        for s in stride:
+    
+    gv.dp_test_save_data = False
+    gv.dp_image_save = False
+    gv.log_write = False
+    gv.show_progress = False
+    # get all possible parameters
+    info  = []
+    pars  = []
+ 
+    iteration = -1
+    for bn in batch_num:
+      for bs in batch_size:
+        for ins in ins_size:
+          for s in stride:
             for lo in label_option:
-                for lr in learning_rate:
-                    for lm in label_mode:
-                        info = ('ins:'+str(ins)+' s:'+str(s)+' classes:'+str(lo)
-                            +' LR:' +str(lr)+' mode:'+lm)
-                        
-                        iteration = iteration + 1
-                        current_row = performance(ins, s, lo, batch_num,
-                                                  batch_size, lr, lm)
+              for lr in learning_rate:
+                for lm in label_mode:
+                  iteration = iteration + 1
+                  info.append(str(bn) + ' ' + str(bs) +  ' ' + str(ins)+ ' ' +
+                              str(s)  + ' ' + str(lo) + ' ' + str(lr) + ' ' +
+                              lm)
+                  pars.append((ins, s, lo, bn, bs, lr, lm))
 
-                        if(par_evaluation.size == 0):
-                            par_evaluation = current_row
-                        else:
-                            np.append(par_evaluation, current_row, axis = 0)
+    # calculating with all the parameters
+    if(MaxProcessNum <= 0):
+        pool = multiprocessing.Pool()
+    else:
+        pool = multiprocessing.Pool(processes = MaxProcessNum)
+    evaluation = pool.map(multi_run_wrapper, pars)
+    pool.close()
+    pool.join()
+    
+    FILE_HEAD = ['batch_num', 'batch_size', 'ins_size', 'stride',
+                 'label_option', 'learning_rate', 'label_mode',
+                 'slope', 'intercept', 'r_value', 'p_value', 'std_err'
+                 'accuracy_total', 'accuracy_neg', 'accuracy_pos',
+                 'accuracy_distance']
 
-                        PROGRESS.setInfo(suffix_info = info)
-                        PROGRESS.setCurrentIteration(iteration)
-                        PROGRESS.printProgress()
-                        directory = gv.__DIR__ + gv.dp__tuningPar_dir
-                        if not os.path.exists(directory):
-                            os.makedirs(directory)
-                        par_evaluation.tofile(directory
-                            + gv.dp__tuningPar_filename, sep = ' ')
+    directory = gv.__DIR__ + gv.dp__tuningPar_dir
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    f = open(directory + gv.dp__tuningPar_filename, "w")
+    for item in FILE_HEAD:
+        f.write(item + ' ')
+    f.write('\n')
+    for info_line, eval_res in zip(info, evaluation):
+        f.write(info_line)
+        for item in eval_res:
+            f.write(' %f' % item)
+        f.write('\n')  
+    f.close()
+    return [info, evaluation]
 
-
-def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
+def test_run(ins_size = 100, stride = 10, label_option = 0, batch_num = 10000,
         batch_size = 2000, learning_rate = 0.01, label_mode = 'NUM',
         run_mode = 'NO'):
     
@@ -190,6 +217,8 @@ def test_run(ins_size = 100, stride = 10, label_option = 100, batch_num = 10000,
                [min(bubble_num)*slope + intercept,
                 max(bubble_num)*slope + intercept], c = 'r')
     ax[1].plot(accuracy)
+    print 'slope intercept r_value p_value std_err'
+    print slope, intercept, r_value, p_value, std_err
     plt.show()
 
 def performance(ins_size = 100, stride = 10, label_option = 100,
@@ -206,10 +235,8 @@ def performance(ins_size = 100, stride = 10, label_option = 100,
     result, accuracy = test(classifier, ins_size, stride, label_option)
     slope, intercept, r_value, p_value, std_err = linregress(bubble_num,
                                                          result.T)
-
     status        = np.append(np.array([slope, intercept, r_value, 
                                         p_value, std_err]), accuracy)
-
     # save result
     directory = gv.__DIR__ + gv.dp__tuningPar_dir
     if not os.path.exists(directory):
@@ -219,33 +246,3 @@ def performance(ins_size = 100, stride = 10, label_option = 100,
                   + '_training_' + str(learning_rate) + '_' + str(batch_num)
                   + '_' + str(batch_size) + '_result.dat')    
     return status 
-                  
-def main():
-    try:      
-        if len(sys.argv) > 1:
-            print('Runing ')
-            test_run(ins_size = 40,
-                stride = 7,
-                label_option = 100,
-                batch_num = 10000,
-                batch_size = 2000,
-                learning_rate = 0.14,
-                label_mode = 'PRO',
-                run_mode = sys.argv[1])
-        else:
-            print ('Parameter Tuning')
-            tuningParameters(batch_num = 10000,
-                      batch_size = 2000,
-                      learning_rate = [0.001, 0.01, 0.05],
-                      ins_size = [20, 50, 100, 200],
-                      stride = [10, 20],
-                      label_option = [100, 1000],
-                      label_mode =['PRO', 'NUM'] )
-    except KeyboardInterrupt:
-        print "Shutdown requested... exiting"
-    except Exception:
-        traceback.print_exc(file=sys.stdout)
-    sys.exit(0)
-
-if __name__ == '__main__':
-    main()
