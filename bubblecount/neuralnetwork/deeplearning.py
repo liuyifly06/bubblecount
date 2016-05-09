@@ -6,73 +6,80 @@
 #matplotlib.use('Agg')
 ###############
 
-import time, skflow, multiprocessing, os
+import sys, time, multiprocessing, os
 import os.path
 import numpy as np
 import dataset as ds
+import skimage.io as io
+import tensorflow.contrib.learn as skflow
 import tensorflow as tf
-from skimage import io
 from scipy.stats import linregress
 from matplotlib import pyplot as plt
 from bubblecount import globalvar as gv
 from bubblecount.preprocess.readinfo import getinfo
 from bubblecount.progressbar import progress
 
-def train(batchNum = 500, batchSize = 200, learningRate = 0.001,
-          layers = [200, 400, 200], ImagePatchWidth = 20,
-          ImagePatchStep = 4, labelOptionNum = 0,
-          labelMode = 'PRO'):
-
-    trainDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep,
-                                labelOptionNum, 'train', labelMode);
-    print ('Training deep learning neural network ...')
-    """TensorFlow-skflow DNN Classifier model.
+def train(batchNum = 500,
+          batchSize = 200,
+          steps = 200,
+          ImagePatchWidth = 20,
+          labelMode = 'PRO',
+          layers = [200, 400, 200],
+          learningRate = 0.001,
+          oprimizeMethod = 'Adagrad', #"SGD", "Adam", "Adagrad"
+          ImagePatchStep = 4,
+          dropoutProbability = 0.1):
+    """TensorFlow DNN Regressor model.
     Parameters:
       hidden_units: List of hidden units per layer.
-      n_classes: Number of classes in the target.
       batch_size: Mini batch size.
       steps: Number of steps to run over data.
       optimizer: Optimizer name (or class), for example "SGD", "Adam", "Adagrad".
-      learning_rate: If this is constant float value, no decay function is used.
-        Instead, a customized decay function can be passed that accepts
+      learning_rate: If this is constant float value, no decay function is
+        used. Instead, a customized decay function can be passed that accepts
         global_step as parameter and returns a Tensor.
         e.g. exponential decay function:
         def exp_decay(global_step):
             return tf.train.exponential_decay(
                 learning_rate=0.1, global_step,
                 decay_steps=2, decay_rate=0.001)
-      class_weight: None or list of n_classes floats. Weight associated with
-        classes for loss computation. If not given, all classes are
-        supposed to have weight one.
       continue_training: when continue_training is True, once initialized
         model will be continuely trained on every call of fit.
-      config: RunConfig object that controls the configurations of the
-        session, e.g. num_cores, gpu_memory_fraction, etc.
+      config: RunConfig object that controls the configurations of the session,
+        e.g. num_cores, gpu_memory_fraction, etc.
+      verbose: Controls the verbosity, possible values:
+        0: the algorithm and debug information is muted.
+        1: trainer prints the progress.
+        2: log device placement is printed.
       dropout: When not None, the probability we will drop out a given coordinate.
     """
-    classifier = skflow.TensorFlowDNNClassifier(
+    print ('Training deep learning neural network ...')
+    trainDataset = ds.read_data_sets(
+        ImagePatchWidth,
+        ImagePatchStep,
+        'train',
+        labelMode)
+    classifier = skflow.TensorFlowDNNRegressor(
         hidden_units      = layers,
-        n_classes         = labelOptionNum,
-        batch_size        = batchSize,
-        steps             = 1,
-        optimizer         = 'Adagrad', #"SGD", "Adam", "Adagrad"
+        batch_size        = 32,
+        steps             = 200,
+        optimizer         = oprimizeMethod, #"SGD", "Adam", "Adagrad"
         learning_rate     = learningRate,
-        continue_training = True)
-    """
-        class_weight      = None,
+        continue_training = True,
         clip_gradients    = 5.0,
-        config            = None,
         verbose           = 1,
-        dropout           = None 
-    """
+        config            = None,
+        dropout           = None)
+
     probar = progress.progress(0, batchNum)
     gv.log_write = False
     for i in range(batchNum):
         probar.setCurrentIteration(i+1)
-        probar.setInfo(prefix_info = 'Training ...',
-                       suffix_info = 'Batch: ' + str(i+1) + '/' + str(batchNum))
+        probar.setInfo(
+            prefix_info = 'Training ...',
+            suffix_info = 'Batch: ' + str(i+1) + '/' + str(batchNum))
         probar.printProgress()
-        images, labels = trainDS.next_batch(batchSize)
+        images, labels = trainDataset.next_batch(batchSize)
         if(gv.log_write):
             classifier.fit(images, labels,
                            logdir = gv.__DIR__ + gv.tensorflow_log_dir)
@@ -80,45 +87,67 @@ def train(batchNum = 500, batchSize = 200, learningRate = 0.001,
             classifier.fit(images, labels)
     return classifier
 
-def test(classifier, ImagePatchWidth = 20, ImagePatchStep = 4,
-         labelOptionNum = 0, labelMode = 'PRO'):
-    image_files, bubble_num, bubble_regions = getinfo()
+def test(classifier,
+         ImagePatchWidth = 20,
+         ImagePatchStep = 4,
+         labelMode = 'PRO',
+         dtype = tf.float32):
 
+    image_files, bubble_num, bubble_regions = getinfo()
     result_filename   = gv.dp__result_filename
     accuracy_filename = gv.dp__accuracy_filename
+    memory_limit      = gv.MEM_LIM
     
     result   = np.zeros((len(image_files),1))
     correct  = np.zeros(4)
     accuracy = np.zeros(4)
     totalnum_instances = 0
     index = -1
-    PROGRESS = progress.progress(0, len(image_files), prefix_info = 'Labeling ')
     
     labeled_number = np.zeros((len(image_files),1))
 
     for i, image_file in enumerate(image_files):
         testDS = ds.read_data_sets(ImagePatchWidth, ImagePatchStep,
-                                   labelOptionNum, 'test', labelMode,
+                                   'test', labelMode,
                                    imageName = image_file)
-        y = classifier.predict(testDS.images)
+
+        batch_size = np.floor(memory_limit / (ImagePatchWidth**2*3)
+                              / 4 / 2)
+        batch_num  = int(np.ceil(np.true_divide(testDS.xlength * testDS.ylength,
+                                            batch_size)))
+        y  = np.zeros((testDS.num_examples,1))
+        
+        PROGRESS = progress.progress(0, batch_num)
+        for j in range(batch_num):
+          PROGRESS.setCurrentIteration(j+1)
+          PROGRESS.setInfo(prefix_info = 'Labeling ' + image_file,
+                           suffix_info = str(i+1) + '/' + str(len(image_files)))
+          PROGRESS.printProgress()
+          start = testDS.index_in_epoch
+          if (start + batch_size > testDS.num_examples) :
+            end = testDS.num_examples
+          else:
+            end = start + batch_size
+          batch_images, _ = testDS.next_batch(end-start)        
+          y[int(start):int(end)] = classifier.predict(batch_images)
+
         index = index + 1
         result[index] = np.sum(y)
         # saving labeled result as image
         if(gv.dp_image_save):
-            io.imsave(gv.__DIR__ + gv.dp__image_dir + image_file,
-                  np.reshape(y, (testDS.ylength, testDS.xlength)))
-        _y = np.argmax(testDS.labels, axis = 1)
+            image_data = np.reshape(y, (testDS.ylength, testDS.xlength))
+            image_data = image_data - np.amin(image_data)
+            image_data = image_data / np.amax(image_data)
+            io.imsave(gv.__DIR__ + gv.dp__image_dir + image_file, image_data)
+        _y = testDS.labels
         labeled_number[index] = np.sum(_y)
         current_correct =  np.array([np.sum(y == _y),
                            np.sum(np.all([y == _y, _y == 0], axis = 0)),
                            np.sum(np.all([y == _y, _y >  0], axis = 0)),
                            np.sum(np.absolute(np.subtract(y, _y)))])
         correct = np.add(correct, current_correct)
-        totalnum_instances =  _y.size + totalnum_instances
-      
-        PROGRESS.setCurrentIteration(i+1)
-        PROGRESS.setInfo(suffix_info = image_file)
-        PROGRESS.printProgress()
+        totalnum_instances =  _y.size + totalnum_instances     
+       
     
     accuracy = np.true_divide(correct, totalnum_instances)
     if(gv.dp_test_save_data):
@@ -201,9 +230,8 @@ def test_run(ins_size = 100, stride = 10, label_option = 0, batch_num = 10000,
         classifier = train(batchNum = batch_num,
                            batchSize = batch_size,
                            learningRate = learning_rate,
-                           ImagePatchWidth=ins_size,
+                           ImagePatchWidth = ins_size,
                            ImagePatchStep = stride,
-                           labelOptionNum = label_option,
                            labelMode = label_mode)
         result, accuracy = test(classifier, ins_size, stride, label_option)
     result = np.loadtxt(gv.dp__result_filename)
@@ -221,22 +249,27 @@ def test_run(ins_size = 100, stride = 10, label_option = 0, batch_num = 10000,
     print slope, intercept, r_value, p_value, std_err
     plt.show()
 
-def performance(ins_size = 100, stride = 10, label_option = 100,
-                batch_num = 10000, batch_size = 2000, learning_rate = 0.01,
-                label_mode = 'NUM'):
+def performance(ins_size      = 100,
+                stride        = 10,
+                label_option  = 100,
+                batch_num     = 10000,
+                batch_size    = 2000,
+                learning_rate = 0.01,
+                label_mode    = 'NUM'):
     image_files, bubble_num, bubble_regions = getinfo()
-    classifier = train(batchNum = batch_num,
-                       batchSize = batch_size,
-                       learningRate = learning_rate,
-                       ImagePatchWidth=ins_size,
-                       ImagePatchStep = stride,
-                       labelOptionNum = label_option,
-                       labelMode = label_mode)
+    classifier = train(
+        batchNum        = batch_num,
+        batchSize       = batch_size,
+        learningRate    = learning_rate,
+        ImagePatchWidth = ins_size,
+        ImagePatchStep  = stride,
+        labelOptionNum  = label_option,
+        labelMode       = label_mode)
     result, accuracy = test(classifier, ins_size, stride, label_option)
-    slope, intercept, r_value, p_value, std_err = linregress(bubble_num,
-                                                         result.T)
-    status        = np.append(np.array([slope, intercept, r_value, 
-                                        p_value, std_err]), accuracy)
+    slope, intercept, r_value, p_value, std_err = linregress(
+        bubble_num, result.T)
+    status  = np.append(
+        np.array([slope, intercept, r_value, p_value, std_err]), accuracy)
     # save result
     directory = gv.__DIR__ + gv.dp__tuningPar_dir
     if not os.path.exists(directory):

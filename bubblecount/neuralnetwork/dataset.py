@@ -1,13 +1,13 @@
+import skimage.io as io
 import tensorflow as tf
 import numpy as np
 import bubblecount.globalvar as gv
 from matplotlib import pyplot as plt
-from skimage import io
 from bubblecount.preprocess.readinfo import getinfo
 
 class DataSet(object):
     def __init__(self, instances, labels, xlength, ylength, imagedata, 
-                 patch_image_width, dtype=tf.float32):
+                 patch_image_width, dtype = tf.float32):
 
         dtype = tf.as_dtype(dtype).base_dtype
         if dtype not in (tf.uint8, tf.float32):
@@ -61,6 +61,10 @@ class DataSet(object):
         return self._ylength
 
     @property
+    def index_in_epoch(self):
+        return self._index_in_epoch
+
+    @property
     def images(self):
         index = np.ones((self._instances.shape[0],
                          self._instances.shape[1]), dtype=bool)
@@ -105,10 +109,10 @@ class DataSet(object):
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
-        index[start:end] = True
-        return self.extractInstances(index), self._labels[start:end]
+        index[int(start):int(end)] = True
+        return self.extractInstances(index), self._labels[int(start):int(end)]
 
-def read_data_sets(instanceSize, step, numOfClasses, instanceMode, 
+def read_data_sets(instanceSize, step, instanceMode, 
                    labelMode, imageName = '', dtype = tf.float32,
                    plot_show = 0):
     class DataSets(object):
@@ -122,17 +126,18 @@ def read_data_sets(instanceSize, step, numOfClasses, instanceMode,
         filenameList = [imageName]
 
     [instances, labels, ylen, xlen, imagedata] = generateInstancesNN(
-        instanceSize, step, numOfClasses, filenameList, labelMode, plot_show)
+        instanceSize, step, filenameList, labelMode, plot_show)
     data_sets = DataSet(instances, labels, xlen, ylen,
                         imagedata, instanceSize, dtype)
     return data_sets
 
-def generateInstancesNN(instanceSize, step, numOfClasses, filenameList, 
-                        mode, plot_show = 1, label_mutiplier = 1,
+def generateInstancesNN(instanceSize,
+                        step,
+                        filenameList, 
+                        mode, plot_show = 1,
+                        label_mutiplier = 100.0,
                         label_maximium = 99999):
-    if(numOfClasses > 1):
-       label_mutiplier = numOfClasses/2
-       label_maximium = numOfClasses-1
+
     allInstances = np.array([])
     allLabels    = np.array([])
     allImages    = []
@@ -207,7 +212,7 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
       return [xy, results]
 
     # None zero bubbles in the image
-    MEMORY_LIMIT = 1024*1024*1024
+    MEMORY_LIMIT = gv.MEM_LIM
     BYTES_PER_NUMBER = 4
     NUMBER_OF_MATRIX = 7
 
@@ -292,24 +297,26 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
 
 def gaussian2d(x, y, cx, cy, a, b, dtype = tf.float32):
     """
+    This cunction calcuate sum of N 2D Gaussian probability density
+    functions in m points
     y, x : m x n 2D tensor. Position of calculation points 
-           m is number of pixels for labeling
-           n is number of Gaussians in the caluclation
+      m is number of calculation points
+      n is number of Gaussian functions
     cx, cy, a, b : m x n 2D tensor.
-                   Parameters of Gaussian function
-                   cx and cy are center position
-                   a and b are the width in x and y firection
+      Parameters of Gaussian function
+      cx and cy are center position
+      a and b are the width in x and y firection
     """
     # A = 1/(2*pi*a*b)
     A = tf.inv(tf.mul(tf.constant(2.0*np.pi, dtype), tf.mul(a, b)))
     # powerX = (x-xc)^2 / (2*a^2)
     powerX = tf.truediv(tf.pow(tf.sub(x, cx) , tf.constant(2.0, dtype)),
-        tf.mul(tf.constant(2.0, dtype),tf.pow(a, tf.constant(2.0, dtype))))
+      tf.mul(tf.constant(2.0, dtype),tf.pow(a, tf.constant(2.0, dtype))))
     # powerY = (y-yc)^2 / (2*b^2)
     powerY = tf.truediv(tf.pow(tf.sub(y, cy) , tf.constant(2.0, dtype)),
-        tf.mul(tf.constant(2.0, dtype),tf.pow(a, tf.constant(2.0, dtype))))
+      tf.mul(tf.constant(2.0, dtype),tf.pow(a, tf.constant(2.0, dtype))))
     # p = A*exp(- powerX - powerY)    standard 2D Gaussian distribution
     probability = tf.reduce_sum(
-        tf.mul(A, tf.exp(tf.neg(tf.add(powerX, powerY)))), 1)
+      tf.mul(A, tf.exp(tf.neg(tf.add(powerX, powerY)))), 1)
     return probability
 

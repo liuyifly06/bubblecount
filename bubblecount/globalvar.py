@@ -1,5 +1,4 @@
 import os
-
 #dirctory of python package
 __DIR__ = os.path.dirname(os.path.realpath(__file__)) + '/..'
 
@@ -46,3 +45,6 @@ ds_show_filename = True
 #test
 label_linearity_file_dir = '/result/benchmark/'
 label_linearity_file = 'labellinearity.dat'
+
+#Memory Limit
+MEM_LIM = 1024*1024*1024

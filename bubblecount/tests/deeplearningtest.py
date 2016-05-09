@@ -7,8 +7,8 @@ def main():
             dl.test_run(ins_size = 40,
                 stride = 1,
                 label_option = 0,
-                batch_num = 100,
-                batch_size = 2048,
+                batch_num = 20000,
+                batch_size = 20000,
                 learning_rate = 0.14,
                 label_mode = 'PRO',
                 run_mode = sys.argv[1])
