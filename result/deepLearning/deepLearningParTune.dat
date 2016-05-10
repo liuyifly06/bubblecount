@@ -1,3 +1,0 @@
-batch_num batch_size ins_size stride label_option learning_rate label_mode slope intercept r_value p_value std_erraccuracy_total accuracy_neg accuracy_pos accuracy_distance 
-1 200 20 40 100 0.5 PRO 0.000000 0.000000 0.000000 1.000000 0.000000 0.978261 0.978261 0.000000 0.155092
-1 200 20 40 100 0.5 PRO 0.000000 0.000000 0.000000 1.000000 0.000000 0.978261 0.978261 0.000000 0.155092

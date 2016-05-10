@@ -57,9 +57,8 @@ class progress(object):
             remainTime  = time.strftime("%H:%M:%S",
                           time.gmtime(past_time/self.iteration*
                                      (self.total-self.iteration)))
-
-        sys.stdout.write('%s [%s] %s%s [%s|%s] %s\r' % (self.prefix, bar,
-                         percents, '%', pastTime, remainTime, self.suffix)),
         sys.stdout.flush()
+        sys.stdout.write('%s [%s] %s%s [%s|%s] %s \r' % (self.prefix, bar,
+                         percents, '%', pastTime, remainTime, self.suffix)),
         if self.iteration == self.total:
             print("\n")

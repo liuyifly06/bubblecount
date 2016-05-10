@@ -112,7 +112,7 @@ class DataSet(object):
         index[int(start):int(end)] = True
         return self.extractInstances(index), self._labels[int(start):int(end)]
 
-def read_data_sets(instanceSize, step, instanceMode, 
+def read_data_sets(instanceSize, stride, instanceMode, 
                    labelMode, imageName = '', dtype = tf.float32,
                    plot_show = 0):
     class DataSets(object):
@@ -126,13 +126,13 @@ def read_data_sets(instanceSize, step, instanceMode,
         filenameList = [imageName]
 
     [instances, labels, ylen, xlen, imagedata] = generateInstancesNN(
-        instanceSize, step, filenameList, labelMode, plot_show)
+        instanceSize, stride, filenameList, labelMode, plot_show)
     data_sets = DataSet(instances, labels, xlen, ylen,
                         imagedata, instanceSize, dtype)
     return data_sets
 
 def generateInstancesNN(instanceSize,
-                        step,
+                        stride,
                         filenameList, 
                         mode, plot_show = 1,
                         label_mutiplier = 100.0,
@@ -150,18 +150,18 @@ def generateInstancesNN(instanceSize,
         if(gv.ds_show_filename):       
             print ('Generating instances from [' + imageFilename + 
                    ']... { patch width: ' + str(instanceSize) + ' stride: ' + 
-                   str(step) + ' }')
+                   str(stride) + ' }')
 
         filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
         imageData = io.imread(filename)        
         positiveLabels = bubble_regions[image_files.index(imageFilename)]        
         [m, n, c] = imageData.shape
-        Y = np.arange(0, (m-instanceSize + 1) - (m-instanceSize + 1)%step, step)
-	X = np.arange(0, (n-instanceSize + 1) - (n-instanceSize + 1)%step, step)
+        Y = np.arange(0, (m-instanceSize + 1), stride)
+	X = np.arange(0, (n-instanceSize + 1), stride)
         ylen = len(Y)
         xlen = len(X)
-        instances, labels = patchlabel(Y,X,positiveLabels,size = instanceSize,
-                                       stride = step, mode = mode)
+        instances, labels = patchlabel(Y,X,positiveLabels,patchsize = instanceSize,
+                                       stride = stride, mode = mode)
         labels = np.around(labels*label_mutiplier, decimals = 1)
         labels = np.minimum(labels, label_maximium)
         instances = np.append(instances, i*np.ones((instances.shape[0], 1)),
@@ -187,7 +187,7 @@ def generateInstancesNN(instanceSize,
 
     return [allInstances, allLabels, ylen, xlen, allImages]
 
-def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
+def patchlabel(y, x, positiveLabels, patchsize, stride, mode = 'PRO',
                scale = 0.2, dtype = tf.float32):
     """
     parameters:
@@ -216,7 +216,8 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
     BYTES_PER_NUMBER = 4
     NUMBER_OF_MATRIX = 7
 
-    xv, yv = np.meshgrid(np.arange(x[-1] + size), np.arange(y[-1] + size))
+    xv, yv = np.meshgrid(np.arange(x[-1] + patchsize),
+                         np.arange(y[-1] + patchsize))
     original_shape = xv.shape
     xv = np.reshape(xv,(np.size(xv),1))
     yv = np.reshape(yv,(np.size(yv),1))
@@ -281,16 +282,17 @@ def patchlabel(y, x, positiveLabels, size = 40, stride = 10, mode = 'PRO',
     if(mode == 'NUM'):
       detail   = tf.convert_to_tensor(image_labels, dtype = dtype)
       detail   = tf.expand_dims(tf.expand_dims(detail, 0), 3)
-      template = tf.ones([size, size, 1, 1], dtype)
+      template = tf.ones([patchsize, patchsize, 1, 1], dtype)
       sums     = tf.nn.conv2d(detail, template, [1, 1, 1, 1], "SAME")
       labels   = tf.reduce_sum(tf.reduce_sum(sums, 3), 0)
       results  = labels.eval(session=sess)
     
     xv, yv = np.meshgrid(x, y)
     xy = np.append(np.reshape(xv, (np.size(xv),1)),
-                   np.reshape(yv, (np.size(yv),1)), axis = 1)  
-    results = results[xy[:,1] + int(stride/2), xy[:,0] + int(stride/2)]
-    results = np.reshape(results, (np.size(results), 1))    
+                   np.reshape(yv, (np.size(yv),1)), axis = 1) 
+
+    results = results[xy[:,1] + int(patchsize/2), xy[:,0] + int(patchsize/2)]
+    results = np.reshape(results, (np.size(results), 1))
     sess.close()
 
     return [xy, results]
