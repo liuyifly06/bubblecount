@@ -112,9 +112,14 @@ class DataSet(object):
         index[int(start):int(end)] = True
         return self.extractInstances(index), self._labels[int(start):int(end)]
 
-def read_data_sets(instanceSize, stride, instanceMode, 
-                   labelMode, imageName = '', dtype = tf.float32,
-                   plot_show = 0):
+def read_data_sets(instanceSize,
+                   stride,
+                   instanceMode, 
+                   labelMode,
+                   imageName = '',
+                   dtype = tf.float32,
+                   plot_show = 0,
+                   label_mutiplier = 1.0):
     class DataSets(object):
         pass
     data_sets = DataSets()
@@ -126,7 +131,12 @@ def read_data_sets(instanceSize, stride, instanceMode,
         filenameList = [imageName]
 
     [instances, labels, ylen, xlen, imagedata] = generateInstancesNN(
-        instanceSize, stride, filenameList, labelMode, plot_show)
+        instanceSize = instanceSize,
+        stride = stride, 
+        filenameList = filenameList,
+        mode = labelMode,
+        plot_show = plot_show,
+        label_mutiplier = label_mutiplier)
     data_sets = DataSet(instances, labels, xlen, ylen,
                         imagedata, instanceSize, dtype)
     return data_sets
@@ -135,8 +145,7 @@ def generateInstancesNN(instanceSize,
                         stride,
                         filenameList, 
                         mode, plot_show = 1,
-                        label_mutiplier = 100.0,
-                        label_maximium = 99999):
+                        label_mutiplier = 1.0):
 
     allInstances = np.array([])
     allLabels    = np.array([])
@@ -162,8 +171,7 @@ def generateInstancesNN(instanceSize,
         xlen = len(X)
         instances, labels = patchlabel(Y,X,positiveLabels,patchsize = instanceSize,
                                        stride = stride, mode = mode)
-        labels = np.around(labels*label_mutiplier, decimals = 1)
-        labels = np.minimum(labels, label_maximium)
+        labels = labels*label_mutiplier
         instances = np.append(instances, i*np.ones((instances.shape[0], 1)),
                               axis = 1)
         allImages.append(imageData)

@@ -24,6 +24,7 @@ def train(batchNum = 500,
           ImagePatchWidth = 20,
           ImagePatchStep = 4,
           labelMode = 'PRO',
+          label_mutiplier = 1.0,
           hidden_units = [200, 400, 200],
           steps = 200,
           optimizer = 'Adagrad', #"SGD", "Adam", "Adagrad"
@@ -59,10 +60,11 @@ def train(batchNum = 500,
     print ('Training deep learning neural network ...')
     # generate data set
     trainDataset = ds.read_data_sets(
-        ImagePatchWidth,
-        ImagePatchStep,
-        'train',
-        labelMode)
+        instanceSize = ImagePatchWidth,
+        stride = ImagePatchStep,
+        instanceMode = 'train',
+        labelMode = labelMode,
+        label_mutiplier = label_mutiplier)
    
     # deep neural-network regression class (DNNRegressor)
     classifier = skflow.TensorFlowDNNRegressor(
@@ -99,6 +101,7 @@ def test(classifier,
          ImagePatchWidth = 20,
          ImagePatchStep = 4,
          labelMode = 'PRO',
+         label_mutiplier = 1.0,
          plot_show = 1,
          save_image = True):
     """ label image with trained deep neural-network
@@ -108,12 +111,13 @@ def test(classifier,
     
     # generate test data
     testDS = ds.read_data_sets(
-        ImagePatchWidth,
-        ImagePatchStep,
-        'test',
-        labelMode,
-        imageName = filename)
-  
+        instanceSize = ImagePatchWidth,
+        stride = ImagePatchStep,
+        instanceMode = 'test',
+        labelMode = labelMode,
+        imageName = filename,
+        label_mutiplier = label_mutiplier)
+
     # decide batch number and batch size according to memory requirement
     memory_limit = gv.MEM_LIM
     batch_size = np.floor(memory_limit / (ImagePatchWidth**2*3) / 4 / 3)
@@ -167,6 +171,7 @@ def test(classifier,
 def testall(classifier,
             ImagePatchWidth = 20,
             ImagePatchStep = 4,
+            label_mutiplier = 1.0,
             labelMode = 'PRO',
             image_show = 0,         # show labeling result of each image    
             save_image = True,      # save each labeled image
@@ -194,6 +199,7 @@ def testall(classifier,
             ImagePatchWidth = ImagePatchWidth,
             ImagePatchStep = ImagePatchStep,
             labelMode = labelMode,
+            label_mutiplier = label_mutiplier,
             plot_show = image_show,
             save_image = save_image)
         
@@ -217,6 +223,7 @@ def performance(ImagePatchWidth = 100,
                 ImagePatchStep = 10,
                 trainBatchNum = 10000,
                 trainBatchSize = 2000,
+                label_mutiplier = 1.0,
                 hidden_units = [200, 400, 200],
                 trainSteps = 200,
                 optimizer = 'Adagrad', #"SGD", "Adam", "Adagrad"
@@ -240,6 +247,7 @@ def performance(ImagePatchWidth = 100,
         batchSize       = trainBatchSize,
         ImagePatchWidth = ImagePatchWidth,
         ImagePatchStep  = ImagePatchStep,
+        label_mutiplier = label_mutiplier,
         labelMode       = label_mode,
         hidden_units    = hidden_units,
         steps           = trainSteps,
@@ -256,6 +264,7 @@ def performance(ImagePatchWidth = 100,
         ImagePatchWidth = ImagePatchWidth,
         ImagePatchStep = ImagePatchStep,
         labelMode = label_mode, 
+        label_mutiplier = label_mutiplier,
         image_show = 0,
         save_image = False,
         save_result = False) # Save in this function, no need to save twice
@@ -276,6 +285,7 @@ def performance(ImagePatchWidth = 100,
             str(ImagePatchStep)   + '_' +
             str(trainBatchNum)    + '_' +
             str(trainBatchSize)   + '_' +
+            str(label_mutiplier)  + '_' +
             str(hidden_units)     + '_' +
             str(trainSteps)       + '_' +
             optimizer             + '_' +
@@ -314,6 +324,7 @@ def tuningParameters( MaxProcessNum = 8,
                       trainBatchNum = [10000],
                       trainBatchSize = [2000],
                       trainSteps = [200],
+                      label_mutipliers = [1.0],
                       optimizer = ['Adagrad'], #"SGD", "Adam", "Adagrad"
                       learning_rate = [0.001, 0.005, 0.01, 0.05],
                       ImagePatchWidth = [10, 20, 50, 100, 150],
@@ -351,7 +362,8 @@ def tuningParameters( MaxProcessNum = 8,
             for cg in clip_gradients:
              for lr in learning_rate:
               for dr in dropout:
-                pars.append((pw, ps, bn, bs, hu, ts, op, lr, lm, cg, None, 
+               for lms in label_mutipliers:
+                pars.append((pw, ps, bn, bs, lms, hu, ts, op, lr, lm, cg, None, 
                              verbose, dr, 0, True))
 
     # benchmark for all possible parameters
@@ -369,6 +381,7 @@ def tuningParameters( MaxProcessNum = 8,
                      'ImagePatchStep',
                      'trainBatchNum',
                      'trainBatchSize',
+                     'label_mutiplier',
                      'hidden_units',
                      'trainSteps',
                      'optimizer',
@@ -415,6 +428,7 @@ def plotresultfromfile(ImagePatchWidth = 100,
                        ImagePatchStep = 10,
                        trainBatchNum = 10000,
                        trainBatchSize = 2000,
+                       label_mutiplier = 1.0,
                        hidden_units = [200, 400, 200],
                        trainSteps = 200,
                        optimizer = 'Adagrad', #"SGD", "Adam", "Adagrad"
@@ -434,6 +448,7 @@ def plotresultfromfile(ImagePatchWidth = 100,
         str(ImagePatchStep)   + '_' +
         str(trainBatchNum)    + '_' +
         str(trainBatchSize)   + '_' +
+        str(label_mutiplier)  + '_' +
         str(hidden_units)     + '_' +
         str(trainSteps)       + '_' +
         optimizer             + '_' +
