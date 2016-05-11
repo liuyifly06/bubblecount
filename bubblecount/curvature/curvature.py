@@ -4,14 +4,13 @@
 
 import sys, traceback, time
 import numpy as np
-from ..PreProcess import preprocessing as pre
-from .. import GlobalVariables as gv
+import bubblecount.globalvar as gv
+from bubblecount.preprocess import preprocessing as pre
 from scipy import ndimage as ndi
 from scipy import signal, interpolate
 from scipy.fftpack import rfft, irfft, fftfreq
 from matplotlib import pyplot as plt
 from math import sqrt, sin, exp, atan, atan2
-
 from skimage import io, filters, measure
 from skimage.color import rgb2gray
 from skimage.feature import canny, peak_local_max, match_template
@@ -70,7 +69,6 @@ def iff_filter(sig, scale, plot_show = 0):
         
     return smooth_sig
  
-
 def resampling(x,y,scale):
     l = x.shape
     u = np.arange(0, l[0])
@@ -89,6 +87,7 @@ def resampling(x,y,scale):
     return [xnew, ynew, xder, yder]
 
 def richar_diff(data, mode='wrap'):
+    # calculate derevative
     length = data.shape
     length = length[0]
     A = np.concatenate((data[2:length], data[0:2]))
@@ -118,9 +117,9 @@ def angle_norm(o_data, plot_show = 0):
             index_decrease = np.append(index_decrease,i+1)
 
     for i in index_decrease:
-        data[i:length] = data[i:length]-np.pi
+        data[int(i):int(length)] = data[int(i):int(length)]-np.pi
     for i in index_increase:
-        data[i:length] = data[i:length]+np.pi
+        data[int(i):int(length)] = data[int(i):int(length)]+np.pi
     
     data = data/(max(data)-min(data))*2*np.pi
     data = data-min(data)-np.pi
@@ -221,8 +220,24 @@ def combine_circle(perimeters, thre):
                 else:
                     del_index.append(i)             
     return np.delete(perimeters,del_index,0)
+
+def plotOnImage(image, x, y,
+                sigma = 1,
+                color = (220, 20, 20),
+                threshold = 0.03):
+    [m, n, c] = image.shape
+    mask = np.zeros((m, n))
+    mask[y, x] = 1
+    mask = filters.gaussian(mask, sigma)
+    mask[mask >= threshold] = 1
+    mask[mask <  threshold] = 0
+    for i in range(c):
+        image[mask == 1, i] = color[i]
+    return image
     
-def perimeter_exaction(image, original_image, image_filename = 'test.jpg', \
+def perimeter_exaction(image,
+                       original_image,
+                       image_filename = 'test.jpg',
                        plot_show = 0 ):
     MIN_PER_LENGTH = 35
     MAX_PER_LENGTH = 1E4
@@ -237,8 +252,12 @@ def perimeter_exaction(image, original_image, image_filename = 'test.jpg', \
 
     result_show_image = np.copy(original_image)
     for n, contour in enumerate(contours):
-        result_show_image[contour.astype(int)[:,0], \
-                          contour.astype(int)[:,1]] = (20, 220, 20)
+        
+        # Edge information plot in green color
+        result_show_image = plotOnImage(result_show_image,
+                                        contour.astype(int)[:,1],
+                                        contour.astype(int)[:,0],
+                                        color = (20, 220, 20))
 
         [c_length,c_width] = contour.shape
         seg = []
@@ -271,7 +290,8 @@ def perimeter_exaction(image, original_image, image_filename = 'test.jpg', \
             # index_local_max = index_local_max[0]
             index_local_min = index_local_min[0]
             
-            min_index = index_local_min[dfs[index_local_min] < thre_local_min]            
+            min_index = (index_local_min[dfs[index_local_min] < 
+                         thre_local_min] )
             # max_index = index_local_max[dfs[index_local_max] > thre_local_max]
             
             c_index = min_index    
@@ -349,7 +369,11 @@ def perimeter_exaction(image, original_image, image_filename = 'test.jpg', \
         ind = np.all([np.all([cy < ylimit, cy >= 0], axis = 0), \
                         np.all([cx < xlimit, cx >= 0], axis = 0)],\
                         axis = 0)
-        result_show_image[cy[ind], cx[ind]] = (220, 20, 20)
+        # Bubble information plot in red color
+        result_show_image = plotOnImage(result_show_image,
+                                        cx[ind],
+                                        cy[ind],
+                                        color = (220, 20, 20))
 
     result_filename = gv.__DIR__ + gv.cu__image_dir + image_filename
     io.imsave(result_filename, result_show_image)
@@ -381,8 +405,6 @@ def segmentation(image, method='otsu'):
             ind_e = min(n-1,ind_s+width)
             current_image  = image[0:m-1, ind_s:ind_e]
             thre[0:m-1, i] = filters.threshold_otsu(current_image)*0.8
-
-
         labels = (image - thre) >=0    
     
     elif (method == 'thre_cons'):
@@ -437,11 +459,12 @@ def count_bubble(image_filename, ref_filename, plot_show = 0):
     # Constants
     Window_Size = 5
            
-    pre_image = pre.noise_reduction(image_gray, ref_gray, Window_Size, mode = 0)        
-    
+    pre_image = pre.noise_reduction(image_gray,
+                                    ref_gray,
+                                    Window_Size,
+                                    mode = 0)
     seg_image = segmentation(pre_image,'self_design')
     perimeters = perimeter_exaction(seg_image, image, image_filename)
-
     if(plot_show == 1):
         fig, ax = plt.subplots(1,3)
         ax[0].imshow(image)
@@ -452,7 +475,7 @@ def count_bubble(image_filename, ref_filename, plot_show = 0):
         ax[2].imshow(result)
         ax[2].set_title('Result')
         plt.show()
-        
+       
     return perimeters
 
 def main():

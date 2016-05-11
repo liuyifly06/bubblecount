@@ -2,44 +2,27 @@
 import sys, traceback, time, curvature
 import numpy as np
 import os.path
-from ..PreProcess import preprocessing as pre
-from ..PreProcess.readinfo import getInfo
-from .. import GlobalVariables as gv
 from skimage.color import rgb2gray
 from skimage import io
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.odr import ODR, Model, Data, RealData
-
-
-def linear_fit_function(x, k, b):
-    return k*x + b
-
-def ord_function(beta,x):
-    return beta[0]*x + beta[1]
+import bubblecount.globalvar as gv
+from bubblecount.preprocess import preprocessing as pre
+from bubblecount.preprocess.readinfo import getinfo
+from bubblecount.progressbar import progress
 
 def linearity(image_filenames, data_filename = gv.cu__result_filename):
-    start_time = time.time()
     result = np.zeros((len(image_filenames), 2))
-    index = -1
-    
-    center_region = [-400,400,-800, 600]
-    
-    for filename in image_filenames:
+    center_region = [-400,400,-800,600]
+    probar = progress.progress(0, len(image_filenames))
+    for iteration, filename in enumerate(image_filenames):
+        probar.setCurrentIteration(iteration+1)
+        probar.setInfo(
+            prefix_info = 'Curvature linearity ...',
+            suffix_info = filename)
+        probar.printProgress()
         refname = filename[0:23] + '_background.jpg'
-        elapse_time = (time.time()-start_time)
-        index = index + 1
-          
-        if(elapse_time >= 1):
-            remain_time = elapse_time/index*41*3-elapse_time
-            print 'Curvature analyzing .. ' + filename + \
-                  time.strftime(" %H:%M:%S", time.gmtime(elapse_time))\
-                  + ' has past. ' + 'Remaining time: ' + \
-                  time.strftime(" %H:%M:%S", time.gmtime(remain_time))
-        else:
-            print 'Curvature analyzing .. ' + filename + \
-                  time.strftime(" %H:%M:%S", time.gmtime(elapse_time))\
-                  + ' has past'
         image = io.imread(gv.__DIR__ + gv.__TrainImageDir__ + filename)
         OY = int(image.shape[0]/2)
         OX = int(image.shape[1]/2)
@@ -55,11 +38,10 @@ def linearity(image_filenames, data_filename = gv.cu__result_filename):
                   axis = 0), \
            np.all([circles[:, 1] <= margin[3], circles[:, 1] >= margin[2]], \
                   axis = 0)],  axis = 0)
-
         circles_in_box = circles[index_in_box]
  
-        result[index, 0] = len(circles)
-        result[index, 1] = len(circles_in_box) 
+        result[iteration, 0] = len(circles)
+        result[iteration, 1] = len(circles_in_box) 
 
     result.tofile(data_filename, sep=" ")
     return result
@@ -67,7 +49,7 @@ def linearity(image_filenames, data_filename = gv.cu__result_filename):
 def main():
     try:
         data_filename = gv.cu__result_filename
-        image_files, bubble_num, bubble_regions = getInfo()
+        image_files, bubble_num, bubble_regions = getinfo()
         if not os.path.isfile(data_filename):
             number = linearity(image_files)
         number = np.loadtxt(data_filename)
