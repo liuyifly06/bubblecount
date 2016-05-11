@@ -37,7 +37,7 @@ def noise_reduction(image, background, window_size = 5, mode = 0):
     norm_image = np.true_divide(med_image, (med_bckg/255*254+1))/255    
     return norm_image
 
-def interest_region(image, plot_image = 0, lid_thickness = 680, \
+def interest_region(image, plot_image = 1, lid_thickness = 680, \
                       bot_thickness = 230, side_thickness = 80, \
                     th_x = 0.5, th_y = 0.5):
 

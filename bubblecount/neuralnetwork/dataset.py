@@ -188,7 +188,7 @@ def generateInstancesNN(instanceSize,
             fig, ax = plt.subplots(2)
             ax[0].imshow(imageData)
             ax[0].set_title('Original Image')
-            img = ax[1].imshow(image_show)
+            img = ax[1].imshow(np.sqrt(image_show))
             ax[1].set_title('Labels')
             plt.colorbar(img)
             plt.show()

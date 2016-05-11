@@ -225,14 +225,21 @@ def plotOnImage(image, x, y,
                 sigma = 1,
                 color = (220, 20, 20),
                 threshold = 0.03):
-    [m, n, c] = image.shape
+    if (len(image.shape) == 3):
+        [m, n, c] = image.shape
+    else:
+        [m, n] = image.shape
+        c = 1
     mask = np.zeros((m, n))
     mask[y, x] = 1
     mask = filters.gaussian(mask, sigma)
     mask[mask >= threshold] = 1
     mask[mask <  threshold] = 0
-    for i in range(c):
+    if (c > 1):
+      for i in range(c):
         image[mask == 1, i] = color[i]
+    else:
+      image[mask == 1] = color[0]
     return image
     
 def perimeter_exaction(image,
@@ -365,10 +372,11 @@ def perimeter_exaction(image,
 
     for xyr in perimeter:
         cx, cy = circle_perimeter(int(xyr[0]), int(xyr[1]), int(xyr[2]))
-        [ylimit, xlimit, climit] = result_show_image.shape
+        ylimit = result_show_image.shape[0]
+        xlimit = result_show_image.shape[1]
         ind = np.all([np.all([cy < ylimit, cy >= 0], axis = 0), \
-                        np.all([cx < xlimit, cx >= 0], axis = 0)],\
-                        axis = 0)
+                      np.all([cx < xlimit, cx >= 0], axis = 0)],\
+                      axis = 0)
         # Bubble information plot in red color
         result_show_image = plotOnImage(result_show_image,
                                         cx[ind],
