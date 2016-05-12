@@ -21,6 +21,7 @@ tensorflow_log_dir = '/result/logs/'
 #deeplearning
 dp_test_save_data = True
 dp_image_save = True
+dp__Gaussia_data_dir = '/result/gaussiandata/'
 dp__image_dir = '/images/deepLearning/'
 dp__result_filename = 'deepLearningResult.txt'
 dp__accuracy_filename = 'deepLearningAccuracy.txt'

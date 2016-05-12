@@ -2,6 +2,8 @@ import sys, traceback
 import numpy as np
 from bubblecount.neuralnetwork import deeplearning as dl
 from bubblecount.preprocess.readinfo import getinfo
+from bubblecount.neuralnetwork import dataset as ds
+from bubblecount.progressbar import progress
 from scipy.stats import linregress
 from matplotlib import pyplot as plt
 
@@ -24,10 +26,12 @@ def main():
         dropout = None
         #filename = 'detector_3_no_5_angle_2.jpg'
        
-        image_files, bubble_num, bubble_regions = getinfo()
-        
+        image_files, bubble_num, bubble_regions = getinfo()        
         benchmark_tune = np.zeros((echos_tune,2))
 
+        # generate data:        
+        ds.gaussianDatatoFile(ImagePatchWidth, ImagePatchStep, labelMode)
+    
         classifier, trainDataset = dl.train(
             batchNum = 1,
             batchSize = 1,
@@ -42,7 +46,10 @@ def main():
             config = config,
             verbose = verbose,
             dropout = dropout)
-
+        PROGRESS = progress.progress(0, echos_tune)
+        PROGRESS.setCurrentIteration(i+1)
+        PROGRESS.setInfo(prefix_info = 'Gaussian data generating ...',
+                         suffix_info = imageFilename)
         for i in range(echos_tune):
             classifier = dl.continuetrain(
                 classifier = classifier,
@@ -61,6 +68,8 @@ def main():
                 bubble_num, result.T)
             benchmark_tune[i,0] = r_value
             benchmark_tune[i,1] = std_err
+            PROGRESS.printProgress()
+            print '\n'
 
         fig, ax = plt.subplots(1)
         ax.plot(np.arange(echos_tune), benchmark_tune[:,0], color = 'r')

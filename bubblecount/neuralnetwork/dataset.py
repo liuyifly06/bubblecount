@@ -1,9 +1,11 @@
+import os
 import skimage.io as io
 import tensorflow as tf
 import numpy as np
 import bubblecount.globalvar as gv
 from matplotlib import pyplot as plt
 from bubblecount.preprocess.readinfo import getinfo
+from bubblecount.progressbar import progress
 
 class DataSet(object):
     def __init__(self, instances, labels, xlength, ylength, imagedata, 
@@ -162,15 +164,28 @@ def generateInstancesNN(instanceSize,
                    str(stride) + ' }')
 
         filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
-        imageData = io.imread(filename)        
+        imageData = io.imread(filename)      
         positiveLabels = bubble_regions[image_files.index(imageFilename)]        
         [m, n, c] = imageData.shape
         Y = np.arange(0, (m-instanceSize + 1), stride)
 	X = np.arange(0, (n-instanceSize + 1), stride)
         ylen = len(Y)
         xlen = len(X)
-        instances, labels = patchlabel(Y,X,positiveLabels,patchsize = instanceSize,
-                                       stride = stride, mode = mode)
+        
+        fname = (gv.__DIR__ + 
+                 gv.dp__Gaussia_data_dir +
+                 str(instanceSize) + '_' +
+                 str(stride) + '_' +
+                 mode +
+                 imageFilename[0:-3] + 'npy')
+
+        if(os.path.isfile(fname)):
+            instances, labels = gaussianDataFromFile(fname, X, Y)
+        else:
+            instances, labels = patchlabel(
+                Y, X, positiveLabels,patchsize = instanceSize,
+                stride = stride, mode = mode)
+
         labels = labels*label_mutiplier
         instances = np.append(instances, i*np.ones((instances.shape[0], 1)),
                               axis = 1)
@@ -218,7 +233,7 @@ def patchlabel(y, x, positiveLabels, patchsize, stride, mode = 'PRO',
                      np.reshape(yv, (np.size(yv),1)), axis = 1)
       results = np.zeros((xy.shape[0],1))
       return [xy, results]
-
+ 
     # None zero bubbles in the image
     MEMORY_LIMIT = gv.MEM_LIM
     BYTES_PER_NUMBER = 4
@@ -287,19 +302,23 @@ def patchlabel(y, x, positiveLabels, patchsize, stride, mode = 'PRO',
     image_labels = normalization_factor*image_labels
     results = image_labels
 
+    xv, yv = np.meshgrid(x, y)
+    xy = np.append(np.reshape(xv, (np.size(xv),1)),
+                   np.reshape(yv, (np.size(yv),1)), axis = 1)
+    
     if(mode == 'NUM'):
       detail   = tf.convert_to_tensor(image_labels, dtype = dtype)
       detail   = tf.expand_dims(tf.expand_dims(detail, 0), 3)
-      template = tf.ones([patchsize, patchsize, 1, 1], dtype)
-      sums     = tf.nn.conv2d(detail, template, [1, 1, 1, 1], "SAME")
+      sums     = tf.mul(tf.nn.avg_pool(detail,
+                                       [1, patchsize, patchsize, 1],
+                                       [1, stride, stride, 1],
+                                       'VALID'),
+                        tf.constant(patchsize*patchsize, tf.float32))
       labels   = tf.reduce_sum(tf.reduce_sum(sums, 3), 0)
       results  = labels.eval(session=sess)
+    elif(mode == 'PRO'):
+      results = results[xy[:,1] + int(patchsize/2), xy[:,0] + int(patchsize/2)]
     
-    xv, yv = np.meshgrid(x, y)
-    xy = np.append(np.reshape(xv, (np.size(xv),1)),
-                   np.reshape(yv, (np.size(yv),1)), axis = 1) 
-
-    results = results[xy[:,1] + int(patchsize/2), xy[:,0] + int(patchsize/2)]
     results = np.reshape(results, (np.size(results), 1))
     sess.close()
 
@@ -329,4 +348,48 @@ def gaussian2d(x, y, cx, cy, a, b, dtype = tf.float32):
     probability = tf.reduce_sum(
       tf.mul(A, tf.exp(tf.neg(tf.add(powerX, powerY)))), 1)
     return probability
+
+def gaussianDataFromFile(fname, x, y):
+    labels = np.load(fname)
+    xv, yv = np.meshgrid(x, y)
+    xy = np.append(np.reshape(xv, (np.size(xv),1)),
+                   np.reshape(yv, (np.size(yv),1)), axis = 1)
+    return [xy, labels] 
+   
+def gaussianDatatoFile(instanceSize, stride, labelMode):
+    """ Calculation of Gaussian value of every point is time consuming.
+        For accelarate the trainning and test process, this function generate
+        Gaussian data for each image and save to file. When training and
+        testing, only need to load data from file.
+    """
+    image_files, bubble_num, bubble_regions = getinfo()    
+    PROGRESS = progress.progress(0, len(image_files))
+    
+    for i, imageFilename in enumerate(image_files):
+        PROGRESS.setCurrentIteration(i+1)
+        PROGRESS.setInfo(prefix_info = 'Gaussian data generating ...',
+                         suffix_info = imageFilename)
+        PROGRESS.printProgress()
+
+        filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
+        imageData = io.imread(filename)      
+        positiveLabels = bubble_regions[image_files.index(imageFilename)]        
+        [m, n, c] = imageData.shape
+
+        Y = np.arange(0, (m-instanceSize + 1), stride)
+	X = np.arange(0, (n-instanceSize + 1), stride)
+        instances, labels = patchlabel(Y,X,positiveLabels,
+                                       patchsize = instanceSize,
+                                       stride = stride,
+                                       mode = labelMode)
+
+        directory = gv.__DIR__ + gv.dp__Gaussia_data_dir
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        filename = (directory +
+                    str(instanceSize) + '_' +
+                    str(stride) + '_' +
+                    labelMode +
+                    imageFilename[0:-3]) + 'npy'
+        np.save(filename, np.array(labels))
 
