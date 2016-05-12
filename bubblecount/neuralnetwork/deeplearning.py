@@ -94,6 +94,30 @@ def train(batchNum = 500,
                            logdir = gv.__DIR__ + gv.tensorflow_log_dir)
         else:
             classifier.fit(images, labels)
+    return classifier, trainDataset
+
+def continuetrain(classifier,
+                  trainDataset,
+                  batchNum = 500,
+                  batchSize = 200):
+    """Continue Train deep neural-network.
+    """
+    print ('Training deep learning neural network ...')
+    # train the DNNRegressor on generated data set
+    probar = progress.progress(0, batchNum)
+    gv.log_write = False
+    for i in range(batchNum):
+        probar.setCurrentIteration(i+1)
+        probar.setInfo(
+            prefix_info = 'Training ...',
+            suffix_info = 'Batch: ' + str(i+1) + '/' + str(batchNum))
+        probar.printProgress()
+        images, labels = trainDataset.next_batch(batchSize)
+        if(gv.log_write):
+            classifier.fit(images, labels,
+                           logdir = gv.__DIR__ + gv.tensorflow_log_dir)
+        else:
+            classifier.fit(images, labels)
     return classifier
 
 def test(classifier,
@@ -242,7 +266,7 @@ def performance(ImagePatchWidth = 100,
     image_files, bubble_num, bubble_regions = getinfo()
 
     # train DNN
-    classifier = train(
+    classifier, _ = train(
         batchNum        = trainBatchNum,
         batchSize       = trainBatchSize,
         ImagePatchWidth = ImagePatchWidth,
