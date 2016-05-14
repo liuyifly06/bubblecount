@@ -1,3 +1,0 @@
-ImagePatchWidth ImagePatchStep trainBatchNum trainBatchSize label_mutiplier hidden_units trainSteps optimizer learning_rate label_mode clip_gradients dropout slope intercept r_value p_value std_err accuracy_total accuracy_neg accuracy_pos accuracy_distance 
-(10, 1000, 1, 2, (1.0,), [200, 400, 200], 1, 'Adagrad', 0.1, 'PRO', 5.0, None, 1, None, 0, True) -0.000184 0.383005 -0.170881 0.058793 0.000096 0.000000 0.000000 0.000000 nan
-(10, 1000, 1, 2, (1.0,), [200, 400, 200], 1, 'Adagrad', 0.1, 'NUM', 5.0, None, 1, None, 0, True) -0.000184 0.383005 -0.170881 0.058793 0.000096 0.000000 0.000000 0.000000 nan

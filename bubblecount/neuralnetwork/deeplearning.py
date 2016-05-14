@@ -147,7 +147,7 @@ def test(classifier,
     batch_size = np.floor(memory_limit / (ImagePatchWidth**2*3) / 4 / 3)
     batch_num  = int(np.ceil(
         np.true_divide(testDS.xlength * testDS.ylength, batch_size)))
-   
+
     # labeling
     _y = testDS.labels                                 # correct labels
     y  = np.zeros((testDS.num_examples,1))             # label results
@@ -163,7 +163,7 @@ def test(classifier,
             end = start + batch_size
         batch_images, _ = testDS.next_batch(end-start)        
         y[int(start):int(end)] = classifier.predict(
-            batch_images, batch_size = 256)
+            batch_images, batch_size = 1024)
    
     # benchmark
     correctNumber =  np.array([

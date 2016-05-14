@@ -3,9 +3,9 @@ from bubblecount.neuralnetwork import deeplearning as dl
 def main():
     try:
         dl.tuningParameters(
-            MaxProcessNum = 24,
-            trainBatchNum = [20000],
-            trainBatchSize = [20000],
+            MaxProcessNum = 2,
+            trainBatchNum = [9000],
+            trainBatchSize = [2000],
             trainSteps = [200],
             label_mutipliers = [1.0, 100.0],
             optimizer = ["Adagrad"], #"SGD", "Adam", "Adagrad"
@@ -14,7 +14,7 @@ def main():
             ImagePatchStep = [1],
             label_mode =['PRO', 'NUM'],
             hidden_units = [[50,100,50],[200,400,200]],
-            clip_gradients = [clip_gradients],
+            clip_gradients = [5.0],
             dropout = [None, 0.2, 0.5],
             verbose = 1,
             plot_show = 1,
