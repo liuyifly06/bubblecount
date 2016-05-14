@@ -2,8 +2,8 @@
 # Skflow use google machine learning tool TensorFlow
 
 ## for server##
-#import matplotlib
-#matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
 ###############
 
 import sys, time, multiprocessing, os
@@ -264,7 +264,7 @@ def performance(ImagePatchWidth = 100,
     """
     # information of all aviliable images
     image_files, bubble_num, bubble_regions = getinfo()
-
+    ds.gaussianDatatoFile(ImagePatchWidth, ImagePatchStep, label_mode)
     # train DNN
     classifier, _ = train(
         batchNum        = trainBatchNum,
