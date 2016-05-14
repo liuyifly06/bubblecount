@@ -2,6 +2,7 @@ import sys, traceback
 from bubblecount.neuralnetwork import deeplearning as dl
 def main():
     try:
+        label_mutiplier = 1.0,
         batchNum = 1
         batchSize = 2
         ImagePatchWidth = 10
@@ -22,6 +23,7 @@ def main():
             batchSize = batchSize,
             ImagePatchWidth = ImagePatchWidth,
             ImagePatchStep = ImagePatchStep,
+            label_mutiplier = label_mutiplier,
             labelMode = labelMode,
             hidden_units = hidden_units,
             steps = steps,
@@ -35,6 +37,7 @@ def main():
         dl.test(
             classifier,
             filename,
+            label_mutiplier = label_mutiplier,
             ImagePatchWidth = ImagePatchWidth,
             ImagePatchStep = ImagePatchStep,
             labelMode = labelMode,
@@ -45,6 +48,7 @@ def main():
             classifier,
             ImagePatchWidth = ImagePatchWidth,
             ImagePatchStep = ImagePatchStep,
+            label_mutiplier = label_mutiplier,
             labelMode = labelMode) 
         
         dl.performance(
@@ -52,6 +56,7 @@ def main():
             ImagePatchStep = ImagePatchStep,
             trainBatchNum = batchNum,
             trainBatchSize = batchSize,
+            label_mutiplier = label_mutiplier,
             hidden_units = hidden_units,
             trainSteps = steps,
             optimizer = optimizer,
@@ -64,11 +69,13 @@ def main():
             plot_show = 1,
             save_result = True)
         """
+        """
         dl.tuningParameters(
             MaxProcessNum = 8,
             trainBatchNum = [batchNum],
             trainBatchSize = [batchSize],
             trainSteps = [steps],
+            label_mutipliers = [label_mutiplier],
             optimizer = [optimizer], #"SGD", "Adam", "Adagrad"
             learning_rate = [learning_rate],
             ImagePatchWidth = [ImagePatchWidth],
@@ -80,12 +87,13 @@ def main():
             verbose = 1,
             plot_show = 1,
             save_result = True)
-        
+        #"""
         dl.plotresultfromfile(
             ImagePatchWidth = ImagePatchWidth,
             ImagePatchStep = ImagePatchStep,
             trainBatchNum = batchNum,
             trainBatchSize = batchSize,
+            label_mutiplier = label_mutiplier,
             hidden_units = hidden_units,
             trainSteps = steps,
             optimizer = optimizer,

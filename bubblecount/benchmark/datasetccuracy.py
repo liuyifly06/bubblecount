@@ -8,8 +8,12 @@ from bubblecount import globalvar as gv
 from matplotlib import pyplot as plt
 from scipy.stats import linregress
 
-def labellinearity(patch_size, stride, numOfClasses, labelMode,
-                   progress_show = 1, plot_show = 1):
+def labellinearity(patch_size,
+                   stride,
+                   labelMode = 'PRO',
+                   label_mutiplier = 1,
+                   progress_show = 1,
+                   plot_show = 1):
     gv.ds_show_filename = False 
     image_files, bubble_num, bubble_regions = getinfo()
     bubble_num_afterlabel  =  np.zeros(len(image_files))
@@ -19,13 +23,19 @@ def labellinearity(patch_size, stride, numOfClasses, labelMode,
         probar.setCurrentIteration(i+1)
         probar.setInfo(prefix_info = 'dataset linearity ...',
                        suffix_info = image)
-        probar.printProgress()  
-        image_ds = ds.read_data_sets(patch_size, stride, numOfClasses, 'test', 
-                   labelMode, imageName = image)
+        probar.printProgress() 
+
+        image_ds = ds.read_data_sets(
+             instanceSize = patch_size,
+             stride = stride,
+             instanceMode = 'test',
+             labelMode = labelMode,
+             imageName = image,
+             label_mutiplier = label_mutiplier)
+
         labels = image_ds.labels
         bubble_num_afterlabel[i] = np.sum(labels)
  
-
     slope, intercept, r_value, p_value, std_err = (linregress(bubble_num,
                                                       bubble_num_afterlabel))
 
@@ -52,7 +62,10 @@ def labellinearity(patch_size, stride, numOfClasses, labelMode,
 def multi_run_wrapper(args):
     return labellinearity(*args)
 
-def labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
+def labellinearity_stride(patch_sizes,
+                          strides,
+                          labelModes,
+                          label_mutipliers = [1],
                           MaxProcessNum = -1):
 
     # stop showing process bar for mutilprocessing
@@ -61,9 +74,9 @@ def labellinearity_stride(patch_sizes, strides, numOfClasses, labelModes,
     pars  = []
     for patch_size in patch_sizes:
       for stride in strides:
-        for numclass in numOfClasses:
+        for label_mutiplier in label_mutipliers:
           for labelMode in labelModes:
-            pars.append((patch_size, stride, numclass, labelMode, 0, 0))
+            pars.append((patch_size, stride, labelMode, label_mutiplier, 0, 0))
 
     if(MaxProcessNum <= 0):
         pool = multiprocessing.Pool()

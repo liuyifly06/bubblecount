@@ -2,14 +2,6 @@ import sys, time
 import bubblecount.globalvar as gv
 
 class progress(object):
-    iteration = 0
-    total = 100
-    prefix = ''
-    suffix = ''
-    decimals = 1
-    barLength = 10
-    startTime = time.time()
-
     def __init__(self, current_iteration, total_iterations, prefix_info = '',
                  suffix_info = '', num_decimals = 1, length = 10):
         self.iteration = current_iteration
@@ -18,7 +10,7 @@ class progress(object):
         self.suffix = suffix_info
         self.decimals = num_decimals
         self.barLength = length
-        self.start_time = time.time()
+        self.startTime = time.time()
     
     def setTotalIterations(self, total_iterations):
         self.total = total_iterations
@@ -57,8 +49,9 @@ class progress(object):
             remainTime  = time.strftime("%H:%M:%S",
                           time.gmtime(past_time/self.iteration*
                                      (self.total-self.iteration)))
-        sys.stdout.flush()
+        
         sys.stdout.write('%s [%s] %s%s [%s|%s] %s \r' % (self.prefix, bar,
-                         percents, '%', pastTime, remainTime, self.suffix)),
+                         percents, '%', pastTime, remainTime, self.suffix))
+        sys.stdout.flush()
         if self.iteration == self.total:
             print("\n")
