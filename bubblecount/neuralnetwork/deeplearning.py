@@ -262,9 +262,9 @@ def performance(ImagePatchWidth = 100,
 
     """ performance benchmark through train nand labeling
     """
+    print 'Performace benchmarking ...'
     # information of all aviliable images
     image_files, bubble_num, bubble_regions = getinfo()
-    ds.gaussianDatatoFile(ImagePatchWidth, ImagePatchStep, label_mode)
     # train DNN
     classifier, _ = train(
         batchNum        = trainBatchNum,
@@ -344,6 +344,9 @@ def performance(ImagePatchWidth = 100,
 def multi_run_wrapper(args):
     return performance(*args)
 
+def multi_run_wrapper_data(args):
+    return ds.gaussianDatatoFile(*args)
+
 def tuningParameters( MaxProcessNum = 8,
                       trainBatchNum = [10000],
                       trainBatchSize = [2000],
@@ -389,6 +392,17 @@ def tuningParameters( MaxProcessNum = 8,
                for lms in label_mutipliers:
                 pars.append((pw, ps, bn, bs, lms, hu, ts, op, lr, lm, cg, None, 
                              verbose, dr, 0, True))
+    
+    datasetpar = []
+    for width in ImagePatchWidth:
+#      for stride in ImagePatchStep:
+        for lmode in label_mode:
+          datasetpar.append((width, width, lmode))
+
+    generate_pool = multiprocessing.Pool()
+    generate_pool.map(multi_run_wrapper_data, datasetpar) 
+    generate_pool.close()
+    generate_pool.join()
 
     # benchmark for all possible parameters
     if(MaxProcessNum <= 0):

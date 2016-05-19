@@ -362,6 +362,9 @@ def gaussianDatatoFile(instanceSize, stride, labelMode):
         Gaussian data for each image and save to file. When training and
         testing, only need to load data from file.
     """
+    print ('Generating data file ... width: '
+            + str(instanceSize) + ' stride: ' +
+            str(stride) + ' mode: ' +labelMode)
     image_files, bubble_num, bubble_regions = getinfo()    
     PROGRESS = progress.progress(0, len(image_files))
     
@@ -370,26 +373,31 @@ def gaussianDatatoFile(instanceSize, stride, labelMode):
         PROGRESS.setInfo(prefix_info = 'Gaussian data generating ...',
                          suffix_info = imageFilename)
         PROGRESS.printProgress()
-
-        filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
-        imageData = io.imread(filename)      
-        positiveLabels = bubble_regions[image_files.index(imageFilename)]        
-        [m, n, c] = imageData.shape
-
-        Y = np.arange(0, (m-instanceSize + 1), stride)
-	X = np.arange(0, (n-instanceSize + 1), stride)
-        instances, labels = patchlabel(Y,X,positiveLabels,
-                                       patchsize = instanceSize,
-                                       stride = stride,
-                                       mode = labelMode)
-
-        directory = gv.__DIR__ + gv.dp__Gaussia_data_dir
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        filename = (directory +
+        filename = (gv.__DIR__ + gv.dp__Gaussia_data_dir +
                     str(instanceSize) + '_' +
                     str(stride) + '_' +
                     labelMode +
                     imageFilename[0:-3]) + 'npy'
-        np.save(filename, np.array(labels))
+        if not os.path.isfile(filename):
+          filename = gv.__DIR__ + gv.__TrainImageDir__ + imageFilename
+          imageData = io.imread(filename)      
+          positiveLabels = bubble_regions[image_files.index(imageFilename)]        
+          [m, n, c] = imageData.shape
+
+          Y = np.arange(0, (m-instanceSize + 1), stride)
+	  X = np.arange(0, (n-instanceSize + 1), stride)
+          instances, labels = patchlabel(Y,X,positiveLabels,
+                                         patchsize = instanceSize,
+                                         stride = stride,
+                                         mode = labelMode)
+
+          directory = gv.__DIR__ + gv.dp__Gaussia_data_dir
+          if not os.path.exists(directory):
+              os.makedirs(directory)
+          filename = (directory +
+                      str(instanceSize) + '_' +
+                      str(stride) + '_' +
+                      labelMode +
+                      imageFilename[0:-3]) + 'npy'
+          np.save(filename, np.array(labels))
 

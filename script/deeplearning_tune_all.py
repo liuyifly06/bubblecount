@@ -4,7 +4,7 @@ def main():
     try:
         dl.tuningParameters(
             MaxProcessNum = -1,
-            trainBatchNum = [10000],
+            trainBatchNum = [12000],
             trainBatchSize = [2000],
             trainSteps = [200],
             label_mutipliers = [1.0, 100.0],
